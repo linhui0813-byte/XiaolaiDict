@@ -167,6 +167,7 @@ struct CommandCoverageTests {
         ("--history-report", LaunchMode.historyReport),
         ("--settings-report", LaunchMode.settingsReport),
         ("--model-status", LaunchMode.modelStatus),
+        ("--model-unload", LaunchMode.modelUnload),
         ("--model-report", LaunchMode.modelReport),
         ("--sense-report", LaunchMode.senseReport),
         ("--panel-report", LaunchMode.panelReport),

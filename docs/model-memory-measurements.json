@@ -1,0 +1,471 @@
+{
+  "baseline-256": {
+    "runs": 5,
+    "identifiers": [
+      "mlx-community/Qwen3.5-4B-4bit@ab9c7a42fd31095a40634b3362317779dee9e7fa"
+    ],
+    "peakMiB": [
+      3714.2,
+      3729.1,
+      3726.6,
+      3726.5,
+      3709.3
+    ],
+    "steadyMiB": [
+      2580.5,
+      2596.5,
+      2592.3,
+      2591.5,
+      2575.6
+    ],
+    "gpuActiveMiB": [
+      2259.9,
+      2259.9,
+      2259.9,
+      2259.9,
+      2259.9
+    ],
+    "gpuCachedMiB": [
+      117.8,
+      117.7,
+      117.7,
+      117.7,
+      117.8
+    ],
+    "cacheLimitMiB": [
+      256.0,
+      256.0,
+      256.0,
+      256.0,
+      256.0
+    ],
+    "prewarmMilliseconds": [
+      4938.5,
+      1763.2,
+      1794.5,
+      1731.1,
+      1768.4
+    ],
+    "wordMedianMilliseconds": 886.9,
+    "wordP95Milliseconds": 983.5,
+    "screeningFailures": [
+      [
+        "left-direction"
+      ],
+      [
+        "closed-passive",
+        "left-direction"
+      ],
+      [
+        "left-direction"
+      ],
+      [
+        "broken-passive",
+        "left-direction"
+      ],
+      [
+        "closed-passive",
+        "left-direction"
+      ]
+    ],
+    "note": "Screening checks are not a broad accuracy or latency guarantee. Inspect semantic differences separately."
+  },
+  "baseline-256-overlap": {
+    "runs": 2,
+    "identifiers": [
+      "mlx-community/Qwen3.5-4B-4bit@ab9c7a42fd31095a40634b3362317779dee9e7fa"
+    ],
+    "peakMiB": [
+      3724.9,
+      3732.8
+    ],
+    "steadyMiB": [
+      2755.2,
+      2588.6
+    ],
+    "gpuActiveMiB": [
+      2259.9,
+      2259.9
+    ],
+    "gpuCachedMiB": [
+      257.2,
+      117.1
+    ],
+    "cacheLimitMiB": [
+      256.0,
+      256.0
+    ],
+    "prewarmMilliseconds": [
+      1682.3,
+      1697.1
+    ],
+    "wordMedianMilliseconds": 871.4,
+    "wordP95Milliseconds": 1014.7,
+    "screeningFailures": [
+      [
+        "left-direction"
+      ],
+      [
+        "closed-passive",
+        "left-direction"
+      ]
+    ],
+    "note": "Screening checks are not a broad accuracy or latency guarantee. Inspect semantic differences separately."
+  },
+  "four-bit-64": {
+    "runs": 3,
+    "identifiers": [
+      "mlx-community/Qwen3.5-4B-4bit@ab9c7a42fd31095a40634b3362317779dee9e7fa"
+    ],
+    "peakMiB": [
+      3593.8,
+      3596.4,
+      3577.2
+    ],
+    "steadyMiB": [
+      2552.7,
+      2568.4,
+      2546.5
+    ],
+    "gpuActiveMiB": [
+      2259.9,
+      2259.9,
+      2259.9
+    ],
+    "gpuCachedMiB": [
+      64.8,
+      64.2,
+      64.2
+    ],
+    "cacheLimitMiB": [
+      64.0,
+      64.0,
+      64.0
+    ],
+    "prewarmMilliseconds": [
+      1663.2,
+      1946.1,
+      1709.9
+    ],
+    "wordMedianMilliseconds": 895.8,
+    "wordP95Milliseconds": 1304.5,
+    "screeningFailures": [
+      [
+        "closed-passive",
+        "left-direction"
+      ],
+      [
+        "broken-passive",
+        "left-direction"
+      ],
+      [
+        "left-direction"
+      ]
+    ],
+    "note": "Screening checks are not a broad accuracy or latency guarantee. Inspect semantic differences separately."
+  },
+  "three-bit-256": {
+    "runs": 3,
+    "identifiers": [
+      "mlx-community/Qwen3.5-4B-3bit@6a87bc4e52f513d6d68397b844db31a255f3fb19"
+    ],
+    "peakMiB": [
+      3268.3,
+      3270.3,
+      3272.0
+    ],
+    "steadyMiB": [
+      2222.3,
+      2216.1,
+      2215.8
+    ],
+    "gpuActiveMiB": [
+      1758.7,
+      1758.7,
+      1758.7
+    ],
+    "gpuCachedMiB": [
+      257.1,
+      257.3,
+      256.0
+    ],
+    "cacheLimitMiB": [
+      256.0,
+      256.0,
+      256.0
+    ],
+    "prewarmMilliseconds": [
+      2105.5,
+      1619.4,
+      1625.3
+    ],
+    "wordMedianMilliseconds": 697.5,
+    "wordP95Milliseconds": 857.8,
+    "screeningFailures": [
+      [
+        "refused-isolated",
+        "reopened-isolated",
+        "reopened-passive",
+        "approach-conflicting-hint",
+        "closed-active",
+        "closed-passive",
+        "broken-passive",
+        "bark-tree",
+        "bark-dog",
+        "light-weight",
+        "fine-weather",
+        "left-direction",
+        "right-correct",
+        "sense-bank-finance",
+        "sense-bank-river",
+        "sense-hold-cargo",
+        "sense-approach-method",
+        "sense-light-weight",
+        "sense-match-game",
+        "concurrent-negated-refused",
+        "concurrent-sense-bank-finance"
+      ],
+      [
+        "refused-isolated",
+        "reopened-isolated",
+        "reopened-passive",
+        "negated-refused",
+        "approach-conflicting-hint",
+        "closed-adjective",
+        "closed-active",
+        "closed-passive",
+        "broken-adjective",
+        "broken-passive",
+        "fine-penalty",
+        "fine-weather",
+        "left-direction",
+        "sense-bank-finance",
+        "sense-bank-river",
+        "sense-hold-cargo",
+        "sense-approach-method",
+        "sense-light-weight",
+        "sense-match-game",
+        "concurrent-sense-bank-finance"
+      ],
+      [
+        "refused-isolated",
+        "continues",
+        "reopened-isolated",
+        "reopened-passive",
+        "negated-refused",
+        "approach-conflicting-hint",
+        "closed-adjective",
+        "closed-active",
+        "closed-passive",
+        "broken-passive",
+        "bark-tree",
+        "bark-dog",
+        "fine-penalty",
+        "fine-weather",
+        "left-direction",
+        "record-verb",
+        "lead-metal",
+        "lead-verb",
+        "object-verb",
+        "sense-bank-finance",
+        "sense-bank-river",
+        "sense-hold-cargo",
+        "sense-approach-method",
+        "sense-light-weight",
+        "sense-match-game",
+        "concurrent-negated-refused",
+        "concurrent-sense-bank-finance"
+      ]
+    ],
+    "note": "Screening checks are not a broad accuracy or latency guarantee. Inspect semantic differences separately."
+  },
+  "two-b-256": {
+    "runs": 3,
+    "identifiers": [
+      "mlx-community/Qwen3.5-2B-4bit@674aaa7240b91e8012fcad5d791b7dfe5ba90207"
+    ],
+    "peakMiB": [
+      2343.6,
+      2365.2,
+      2360.0
+    ],
+    "steadyMiB": [
+      1354.5,
+      1370.0,
+      1277.7
+    ],
+    "gpuActiveMiB": [
+      1012.6,
+      1012.6,
+      1012.6
+    ],
+    "gpuCachedMiB": [
+      151.3,
+      151.3,
+      58.4
+    ],
+    "cacheLimitMiB": [
+      256.0,
+      256.0,
+      256.0
+    ],
+    "prewarmMilliseconds": [
+      1757.0,
+      1373.1,
+      1402.3
+    ],
+    "wordMedianMilliseconds": 382.4,
+    "wordP95Milliseconds": 444.7,
+    "screeningFailures": [
+      [
+        "refused-active",
+        "approach-method",
+        "continues",
+        "denied-passive",
+        "reopened-isolated",
+        "reopened-active",
+        "reopened-passive",
+        "approach-conflicting-hint",
+        "closed-passive",
+        "broken-passive",
+        "bank-money",
+        "bark-tree",
+        "match-game",
+        "match-agree",
+        "fine-penalty",
+        "left-direction",
+        "right-correct",
+        "object-noun",
+        "object-verb",
+        "present-gift",
+        "table-postpone",
+        "give-up"
+      ],
+      [
+        "refused-active",
+        "approach-method",
+        "denied-passive",
+        "reopened-active",
+        "reopened-passive",
+        "approach-conflicting-hint",
+        "closed-passive",
+        "broken-passive",
+        "bank-money",
+        "bark-tree",
+        "match-game",
+        "match-agree",
+        "fine-penalty",
+        "left-direction",
+        "right-correct",
+        "object-verb",
+        "table-postpone",
+        "give-up",
+        "concurrent-negated-refused"
+      ],
+      [
+        "refused-passive",
+        "refused-isolated",
+        "approach-method",
+        "denied-passive",
+        "reopened-isolated",
+        "reopened-active",
+        "reopened-passive",
+        "approach-conflicting-hint",
+        "closed-passive",
+        "broken-passive",
+        "bark-tree",
+        "match-game",
+        "match-agree",
+        "fine-penalty",
+        "left-direction",
+        "record-verb",
+        "object-noun",
+        "object-verb",
+        "table-postpone",
+        "give-up",
+        "concurrent-refused-passive"
+      ]
+    ],
+    "note": "Screening checks are not a broad accuracy or latency guarantee. Inspect semantic differences separately."
+  },
+  "idle-120-clean": {
+    "downloaded": false,
+    "downloadRequired": false,
+    "downloadSeconds": 0,
+    "endedTheRunningService": true,
+    "explanation": "In this sentence, \"hold\" refers specifically to the lower compartment of the ship where cargo is kept, rather than a general room or container. The usage emphasizes its role as a secure, enclosed space within the vessel's structure that protects the stored goods.",
+    "explanationSeconds": 1.31,
+    "footprintAfterUnloadMB": 37,
+    "footprintMB": 2584,
+    "gpu": "Device(gpu, 0)",
+    "identifier": "mlx-community/Qwen3.5-4B-4bit@ab9c7a42fd31095a40634b3362317779dee9e7fa",
+    "idleSeconds": 120,
+    "installed": true,
+    "installedIsThePinnedRevision": true,
+    "installedNow": "standard",
+    "loaded": true,
+    "measuredTheModelInstalled": true,
+    "peakMB": 3585,
+    "prewarmed": true,
+    "prewarmSeconds": 1.65,
+    "relaunched": true,
+    "sense": 2,
+    "senseSeconds": 0.4,
+    "sentence": "It was stowed forward in the ship's hold, where the rats had got at the biscuit.",
+    "size": "standard",
+    "translation": "\u5b83\u88ab\u5b58\u653e\u5728\u8239\u8231\u7684\u524d\u90e8\uff0c\u8001\u9f20\u5df2\u7ecf\u54ac\u574f\u4e86\u90a3\u91cc\u7684\u997c\u5e72\u3002",
+    "translationSeconds": 0.52,
+    "translationToldSense": "a large space in the lower part of a ship or aircraft in which cargo is stored",
+    "unloadedAfterSeconds": 120.4,
+    "unloadWatch": "observed"
+  },
+  "installed-default-idle": {
+    "downloaded": false,
+    "downloadRequired": false,
+    "downloadSeconds": 0,
+    "endedTheRunningService": true,
+    "explanation": "In this sentence, \"hold\" functions as a noun referring to the specific storage compartment at the bottom of a ship. The phrase \"ship's hold\" clearly indicates that the biscuit was stored within this enclosed, lower space rather than on the deck.",
+    "explanationSeconds": 1.29,
+    "footprintAfterUnloadMB": 37,
+    "footprintMB": 2598,
+    "gpu": "Device(gpu, 0)",
+    "identifier": "mlx-community/Qwen3.5-4B-4bit@ab9c7a42fd31095a40634b3362317779dee9e7fa",
+    "idleSeconds": 120,
+    "installed": true,
+    "installedIsThePinnedRevision": true,
+    "installedNow": "standard",
+    "loaded": true,
+    "measuredTheModelInstalled": true,
+    "peakMB": 4096,
+    "prewarmed": true,
+    "prewarmSeconds": 1.62,
+    "relaunched": true,
+    "sense": 2,
+    "senseSeconds": 0.39,
+    "sentence": "It was stowed forward in the ship's hold, where the rats had got at the biscuit.",
+    "size": "standard",
+    "translation": "\u5b83\u88ab\u585e\u5728\u8239\u8231\u7684\u524d\u90e8\uff0c\u90a3\u91cc\u7684\u8001\u9f20\u5df2\u7ecf\u54ac\u574f\u4e86\u997c\u5e72\u3002",
+    "translationSeconds": 0.53,
+    "translationToldSense": "a large space in the lower part of a ship or aircraft in which cargo is stored",
+    "unloadedAfterSeconds": 120.31,
+    "unloadWatch": "observed"
+  },
+  "release": {
+    "build": "2026.1001.135627",
+    "hostSha256": "4fe3fcee724b177a103595c8cb969177fd0dae6f9bb4cc1e88312cb0b6d624c0",
+    "swiftTests": 2052,
+    "toolTests": 65,
+    "schedulerReferenceTests": 11,
+    "nativeTranslationChecks": 13,
+    "permissionReports": 3,
+    "normalAppPid": 31205,
+    "ownPermissionsAllowed": [
+      "Accessibility",
+      "ScreenCapture"
+    ],
+    "ownPermissionDecisionTime": "2026-10-01 22:03:05 +0800",
+    "gestureCheck": "not performed",
+    "atomicDeployment": true,
+    "rollbackBuild": "2026.1001.111354"
+  }
+}

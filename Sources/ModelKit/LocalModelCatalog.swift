@@ -31,19 +31,16 @@ public enum LocalModelSize: String, CaseIterable, Codable, Sendable, Comparable 
         }
     }
 
-    /// The **process's** peak footprint, measured on the M4 Max (the Qwen benchmark's `raw` runs):
-    /// 3,585 and 6,633 MB, both at load — the worst moment, when the weights are being mapped
-    /// and MLX's buffers are not yet trimmed. It settles lower afterwards (2,741 / 5,282, and
-    /// the E2E service measured 2,733 MB holding the 4B), but the moment that decides whether a Mac
-    /// swaps is the peak, not what it relaxes to.
-    ///
-    /// **Not MLX's own counters** (3,363 / 5,806): they leave out what the OS has mapped for
-    /// the process, and sizing on them offered every size about 200–800 MB more cheaply than it costs.
-    /// What sizing decides against — **before** loading, because neither MLX's memory limit nor the OS
-    /// pressure handler stops a model too large for the Mac (the MLX-in-XPC spike, S3).
+    /// Conservative process-footprint estimates for admission, not a GPU-only counter.
+    /// The 4B bound is 4,096 MiB: the largest observed peak on Hui's 24 GiB Mac was
+    /// 3,732.8 MiB across seven fresh 256 MiB-pool runs, including overlapping requests.
+    /// Rounding upward leaves about 9.7% measurement margin; the separate 1 GiB headroom
+    /// remains required. This is an estimate, not a hard MLX allocation limit.
+    /// The unchanged 9B estimate is its historical 6,633 MiB M4 Max process peak.
+    /// See docs/model-memory.md for measurements and scope.
     public var peakMemory: UInt64 {
         switch self {
-        case .standard: 3_585 * Self.megabyte
+        case .standard: 4_096 * Self.megabyte
         case .large: 6_633 * Self.megabyte
         }
     }

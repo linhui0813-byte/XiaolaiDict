@@ -27,9 +27,16 @@ enum ModelReport {
         let report: [String: Any] = [
             "reachable": true, "gpu": status.gpu ?? NSNull(), "installed": status.installed?.rawValue ?? NSNull(),
             "loaded": status.loaded, "footprintMB": status.footprint.map(megabytes) ?? NSNull(),
+            "availableBytes": status.availableMemory ?? NSNull(), "physicalBytes": SystemMemory.physical,
         ]
         guard Instrument.write(report, to: write) else { return .internalError }
         return status.gpu == nil ? .failure : .success
+    }
+
+    static func unload() async -> CommandStatus {
+        let ended = await ModelClient().unload()
+        guard Instrument.write(["ended": ended], to: LookupCommand.writeLine) else { return .internalError }
+        return ended ? .success : .failure
     }
 
     /// `--model-report`: the whole path the reader's Mac takes, measured end to end.
@@ -55,7 +62,7 @@ enum ModelReport {
         return ok ? .success : .failure
     }
 
-    /// Whether this run watched an unload. A run with the shipped ten-minute interval does not, and
+    /// Whether this run watched an unload. A run with a configured ten-minute interval does not, and
     /// reports `skipped` — which is not a pass.
     private static func measure(into report: inout [String: Any]) async throws -> Bool {
         let store = ModelStore.standard()
@@ -76,7 +83,7 @@ enum ModelReport {
         report["size"] = size.rawValue
         // **The peak this size was sized against, so a check outside does not need its own copy of
         // the catalogue.** `e2e.sh` bounded the footprint at a hard-coded 4,500 MB "with room for the
-        // process itself" — but 3,585 MB *is* the measured process peak, so the slack was arbitrary
+        // process itself" — but the configured peak already contains margin, so extra slack was arbitrary
         // and double-counted, and the number only ever fitted 4B. This instrument already knows which
         // size it chose; reporting its peak lets the bound be derived from it instead.
         report["peakMB"] = Int(size.peakMemory / (1_024 * 1_024))
@@ -284,7 +291,7 @@ enum ModelReport {
     /// finished saw the service gone in 0 s and measured the client leaving, not the idle timer.
     ///
     /// Only where the interval is short enough to wait out — the end-to-end stage sets 20 s. At the
-    /// shipped ten minutes it says it did not watch, which is **not** the same as having seen one.
+    /// configured ten minutes it says it did not watch, which is **not** the same as having seen one.
     /// Then asks once more, to show the next question brings a fresh service back.
     static func watchIdleUnload(_ watch: IdleWatch, into report: inout [String: Any]) async throws -> UnloadWatch {
         let interval = watch.idleSeconds()

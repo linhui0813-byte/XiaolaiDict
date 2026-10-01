@@ -48,6 +48,10 @@ struct ModuleBoundaryTests {
         // What the model service *does* with a request, written against any `LanguageModel` so its
         // tests need no GPU.
         "LocalModel": ["Foundation", "FoundationModels", "Synchronization"],
+        // GPU code shared only by the model service and its isolated benchmark; never the app.
+        "LocalModelRuntime": ["Foundation", "Darwin", "FoundationModels", "MLX", "MLXFoundationModels",
+                              "MLXHuggingFace", "MLXLLM", "MLXLMCommon", "Tokenizers"],
+        "HuiDictModelBenchmark": ["Foundation"],
         // The private DictionaryServices API, reached by `dlopen` rather than by linking it.
         "DictionaryBridge": ["Foundation", "Synchronization"],
         // Apple's `.dictionary` container, and the facts that differ between the 86 of them. It

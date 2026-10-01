@@ -93,9 +93,9 @@ struct IdleExitTests {
         #expect(await idle.drain(within: .seconds(1)))
     }
 
-    @Test func theIntervalDefaultsToTenMinutesAndIsClamped() {
-        #expect(IdleExit.interval(appDomain: "xiaolaidict.test.no-such-domain") == .seconds(600))
-        #expect(ModelIdle.seconds(configured: nil) == 600)
+    @Test func theIntervalDefaultsToTwoMinutesAndIsClamped() {
+        #expect(IdleExit.interval(appDomain: "xiaolaidict.test.no-such-domain") == .seconds(120))
+        #expect(ModelIdle.seconds(configured: nil) == 120)
         #expect(ModelIdle.seconds(configured: 20) == 20)
         #expect(ModelIdle.seconds(configured: 1) == 10, "an interval that would unload between two questions")
         #expect(ModelIdle.seconds(configured: 86_400) == 3_600, "an interval that would keep gigabytes all day")

@@ -8,8 +8,8 @@ import Testing
 /// needing 6,633 MB, and the 4B that would have answered deleted to make room for it.
 struct ModelChoiceTests {
     private static let mac: UInt64 = 32 * 1_073_741_824
-    /// Enough for 4B (3,585 MB peak) and not for 9B (6,633 MB) — the state that Mac was in.
-    private static let tight: UInt64 = 4_729 * 1_048_576
+    /// Enough for the updated 4B bound plus reserve, and not for 9B.
+    private static let tight: UInt64 = 5 * 1_073_741_824
     private static let roomy: UInt64 = 24 * 1_073_741_824
 
     @Test func thechosenModelAnswersWhenItFits() {
@@ -38,6 +38,12 @@ struct ModelChoiceTests {
             wanted: .large, installed: [.large], physicalMemory: Self.mac, availableMemory: Self.tight)
         #expect(choice == .none(wanted: .large))
         #expect(choice.answering == nil)
+    }
+
+    @Test func theHistoricalFreeMemoryNoLongerClearsTheMeasuredBound() {
+        #expect(ModelSizing.answering(wanted: .large, installed: [.standard, .large],
+                                      physicalMemory: Self.mac, availableMemory: 4_729 * 1_048_576)
+                == .none(wanted: .large))
     }
 
     /// **A larger model never stands in for a smaller one.** Choosing 4B is a decision about

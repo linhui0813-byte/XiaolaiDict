@@ -8,7 +8,9 @@ public enum ModelIdle {
     /// In the app's own defaults domain. launchd starts the service with no arguments, so this is how
     /// the end-to-end stage shortens it for a run — and puts it back after.
     public static let defaultsKey = "ModelIdleSeconds"
-    public static let defaultSeconds = 600
+    // Measured on Hui's Mac: exit after 120.4 s, releasing about 2.5 GiB. The next
+    // lookup reloads the weights; see docs/model-memory.md for the measured tradeoff.
+    public static let defaultSeconds = 120
     /// Bounded, so a stray value can neither unload between two questions of one lookup nor keep
     /// gigabytes resident for an afternoon.
     public static let secondsRange = 10...3_600

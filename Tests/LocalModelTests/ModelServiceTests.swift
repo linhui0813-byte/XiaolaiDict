@@ -403,7 +403,7 @@ struct ModelServiceTests {
         scratches.withLock { $0.append(scratch) }
         let both = [Self.manifest(.standard), Self.manifest(.large)]
 
-        // 16 GB physical: 4B is offered (a quarter is 4,096 MB against a 3,585 MB peak), 9B is not
+        // 16 GB physical: 4B is offered (a quarter is 4,096 MiB against a 4,096 MiB admission bound), 9B is not
         // (it would need 25.9 GB), and 12 GB free is more than enough for either — so only the
         // physical gate can refuse it.
         let chose = Recorder<[LocalModelSize]>([])

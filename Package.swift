@@ -78,6 +78,17 @@ let package = Package(
         // becomes — written against any `LanguageModel`, so its tests run on an injected executor
         // and need no GPU. No MLX here: that is the executable's alone.
         .target(name: "LocalModel", dependencies: ["ModelKit"]),
+        // Shared loader for the service and isolated memory/quality experiments.
+        .target(name: "LocalModelRuntime", dependencies: [
+            "ModelKit",
+            .product(name: "MLX", package: "mlx-swift"),
+            .product(name: "MLXFoundationModels", package: "mlx-swift-lm"),
+            .product(name: "MLXLLM", package: "mlx-swift-lm"),
+            .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
+            .product(name: "MLXHuggingFace", package: "mlx-swift-lm"),
+            .product(name: "Tokenizers", package: "swift-transformers"),
+        ]),
+        .executableTarget(name: "HuiDictModelBenchmark", dependencies: ["ModelKit", "LocalModel", "LocalModelRuntime"]),
         // The local model, behind its own XPC boundary. A GPU fault or an out-of-memory kill takes
         // this process and not the app, and unloading is ending it — which is exact, where MLX's
         // own release is not. Never linked by the app: the app talks to it in typed messages, the
@@ -85,13 +96,8 @@ let package = Package(
         .executableTarget(
             name: "XiaolaiDictModelService",
             dependencies: [
-                "XiaolaiDictBase", "XiaolaiDictPeer", "ModelKit", "LocalModel",
+                "XiaolaiDictBase", "XiaolaiDictPeer", "ModelKit", "LocalModel", "LocalModelRuntime",
                 .product(name: "MLX", package: "mlx-swift"),
-                .product(name: "MLXFoundationModels", package: "mlx-swift-lm"),
-                .product(name: "MLXLLM", package: "mlx-swift-lm"),
-                .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
-                .product(name: "MLXHuggingFace", package: "mlx-swift-lm"),
-                .product(name: "Tokenizers", package: "swift-transformers"),
             ]),
         // The view layer as its own library, not because the app needs the boundary but because
         // Xcode cannot preview an executable target: "Previewing in executable targets now

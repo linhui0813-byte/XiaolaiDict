@@ -314,6 +314,7 @@ struct StringCatalogTests {
         "Sources/XiaolaiDictBase", "Sources/DictionaryModel", "Sources/ModelKit",
         "Sources/XiaolaiDictPeer",
         "Sources/XiaolaiDictCore", "Sources/LocalModel", "Sources/DictionaryBridge",
+        "Sources/LocalModelRuntime",
         // Added 2026-09-27. Absent since the target was created, so the scan above did not cover it —
         // which is exactly what `everyTargetBelowTheViewLayerIsScanned` is for, and it was failing.
         // The third list of its kind to be missing this target: the other two are
@@ -356,7 +357,7 @@ struct StringCatalogTests {
             "XiaolaiDictTestSupport",
             // What a command prints is instrument output, for whoever ran it — the same reason the two
             // XPC services are here, and not reader-facing text a translator would be given.
-            "XiaolaiDictIndex", "XiaolaiDictAlign",
+            "XiaolaiDictIndex", "XiaolaiDictAlign", "HuiDictModelBenchmark",
         ]
         let shouldScan = manifest.matches(of: declared)
             .map { String($0.output[1].substring ?? "") }

@@ -77,6 +77,9 @@ case .success(.settingsReport):
 case .success(.modelStatus):
     runHeadlessReport { await ModelReport.status() }
 
+case .success(.modelUnload):
+    runHeadlessReport { await ModelReport.unload() }
+
 case .success(.modelReport):
     runHeadlessReport { await ModelReport.run() }
 

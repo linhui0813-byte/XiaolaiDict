@@ -1,0 +1,735 @@
+[
+  {
+    "id": "refused-passive",
+    "kind": "word",
+    "word": "refused",
+    "context": "The application was refused.",
+    "expectedAny": [
+      "拒绝",
+      "拒"
+    ],
+    "parts": [
+      "verb"
+    ],
+    "forbiddenAny": [
+      "申请"
+    ],
+    "requiredGroups": [
+      [
+        "被",
+        "遭"
+      ]
+    ]
+  },
+  {
+    "id": "refused-active",
+    "kind": "word",
+    "word": "refused",
+    "context": "They refused to sign.",
+    "expectedAny": [
+      "拒绝",
+      "拒"
+    ],
+    "parts": [
+      "verb"
+    ],
+    "forbiddenAny": [
+      "他们",
+      "签字"
+    ]
+  },
+  {
+    "id": "refused-isolated",
+    "kind": "word",
+    "word": "refused",
+    "context": "",
+    "expectedAny": [
+      "拒绝",
+      "拒"
+    ],
+    "parts": [
+      "verb",
+      "adjective"
+    ],
+    "requiredGroups": [
+      [
+        "被",
+        "遭"
+      ]
+    ]
+  },
+  {
+    "id": "approach-method",
+    "kind": "word",
+    "word": "approach",
+    "context": "Sometimes an approach that requires more lines of code is actually simpler, because it reduces repetition.",
+    "expectedAny": [
+      "方法",
+      "方式",
+      "方案"
+    ],
+    "parts": [
+      "noun"
+    ],
+    "forbiddenAny": [
+      "近似",
+      "代码"
+    ]
+  },
+  {
+    "id": "continues",
+    "kind": "word",
+    "word": "continues",
+    "context": "The discussion continues.",
+    "expectedAny": [
+      "继续",
+      "持续"
+    ],
+    "parts": [
+      "verb"
+    ],
+    "forbiddenAny": [
+      "讨论"
+    ]
+  },
+  {
+    "id": "denied-passive",
+    "kind": "word",
+    "word": "denied",
+    "context": "Her request was denied.",
+    "expectedAny": [
+      "拒绝",
+      "驳回",
+      "否决"
+    ],
+    "parts": [
+      "verb"
+    ],
+    "forbiddenAny": [
+      "她",
+      "请求"
+    ]
+  },
+  {
+    "id": "reopened-isolated",
+    "kind": "word",
+    "word": "reopened",
+    "context": "",
+    "expectedAny": [
+      "重新",
+      "再"
+    ],
+    "parts": [
+      "verb",
+      "adjective"
+    ]
+  },
+  {
+    "id": "reopened-active",
+    "kind": "word",
+    "word": "reopened",
+    "context": "They reopened the shop.",
+    "expectedAny": [
+      "重新",
+      "再"
+    ],
+    "parts": [
+      "verb"
+    ],
+    "forbiddenAny": [
+      "他们",
+      "商店"
+    ]
+  },
+  {
+    "id": "reopened-passive",
+    "kind": "word",
+    "word": "reopened",
+    "context": "The shop was reopened yesterday.",
+    "expectedAny": [
+      "重新",
+      "再"
+    ],
+    "parts": [
+      "verb"
+    ],
+    "forbiddenAny": [
+      "昨天",
+      "商店"
+    ]
+  },
+  {
+    "id": "reopened-adjective",
+    "kind": "word",
+    "word": "reopened",
+    "context": "The newly reopened shop is busy.",
+    "expectedAny": [
+      "重新",
+      "再"
+    ],
+    "parts": [
+      "adjective"
+    ],
+    "forbiddenAny": [
+      "忙",
+      "商店"
+    ]
+  },
+  {
+    "id": "negated-refused",
+    "kind": "sentence",
+    "context": "The application was not refused.",
+    "expectedAny": [
+      "拒"
+    ],
+    "requiredGroups": [
+      [
+        "未",
+        "没有",
+        "没",
+        "并非",
+        "不"
+      ]
+    ]
+  },
+  {
+    "id": "approach-conflicting-hint",
+    "kind": "word",
+    "word": "approach",
+    "context": "This approach reduces repetition in the code.",
+    "expectedAny": [
+      "方法",
+      "方式",
+      "方案"
+    ],
+    "parts": [
+      "noun"
+    ],
+    "hint": "something similar"
+  },
+  {
+    "id": "explain-approach",
+    "kind": "explanation",
+    "word": "approach",
+    "context": "This approach reduces repetition in the code.",
+    "hint": "something similar",
+    "expectedAny": [
+      "方法",
+      "方式",
+      "方案"
+    ]
+  },
+  {
+    "id": "closed-adjective",
+    "kind": "word",
+    "word": "closed",
+    "context": "The closed shop will reopen tomorrow.",
+    "expectedAny": [
+      "关闭",
+      "关门",
+      "停业"
+    ],
+    "parts": [
+      "adjective"
+    ]
+  },
+  {
+    "id": "closed-active",
+    "kind": "word",
+    "word": "closed",
+    "context": "She closed the window.",
+    "expectedAny": [
+      "关闭",
+      "关"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "closed-passive",
+    "kind": "word",
+    "word": "closed",
+    "context": "The window was closed by the guard.",
+    "expectedAny": [
+      "关",
+      "关闭"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "broken-adjective",
+    "kind": "word",
+    "word": "broken",
+    "context": "The broken window needs repair.",
+    "expectedAny": [
+      "破",
+      "碎",
+      "损坏"
+    ],
+    "parts": [
+      "adjective"
+    ]
+  },
+  {
+    "id": "broken-passive",
+    "kind": "word",
+    "word": "broken",
+    "context": "The window was broken by a falling branch.",
+    "expectedAny": [
+      "打破",
+      "打碎",
+      "破坏",
+      "破",
+      "碎"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "comparing",
+    "kind": "word",
+    "word": "comparing",
+    "context": "We are comparing the two plans.",
+    "expectedAny": [
+      "比较",
+      "对比"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "bank-money",
+    "kind": "word",
+    "word": "bank",
+    "context": "She deposited cash at the bank.",
+    "expectedAny": [
+      "银行"
+    ],
+    "parts": [
+      "noun"
+    ]
+  },
+  {
+    "id": "bank-river",
+    "kind": "word",
+    "word": "bank",
+    "context": "They sat on the river bank.",
+    "expectedAny": [
+      "岸"
+    ],
+    "parts": [
+      "noun"
+    ]
+  },
+  {
+    "id": "bark-tree",
+    "kind": "word",
+    "word": "bark",
+    "context": "The tree bark is rough.",
+    "expectedAny": [
+      "树皮"
+    ],
+    "parts": [
+      "noun"
+    ]
+  },
+  {
+    "id": "bark-dog",
+    "kind": "word",
+    "word": "bark",
+    "context": "The dogs bark at strangers.",
+    "expectedAny": [
+      "吠",
+      "叫"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "light-weight",
+    "kind": "word",
+    "word": "light",
+    "context": "This suitcase is light.",
+    "expectedAny": [
+      "轻"
+    ],
+    "parts": [
+      "adjective"
+    ]
+  },
+  {
+    "id": "light-lamp",
+    "kind": "word",
+    "word": "light",
+    "context": "Please light the candle.",
+    "expectedAny": [
+      "点燃",
+      "点亮"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "match-game",
+    "kind": "word",
+    "word": "match",
+    "context": "They won the football match.",
+    "expectedAny": [
+      "比赛"
+    ],
+    "parts": [
+      "noun"
+    ]
+  },
+  {
+    "id": "match-agree",
+    "kind": "word",
+    "word": "match",
+    "context": "The two colors match.",
+    "expectedAny": [
+      "匹配",
+      "搭配",
+      "相配",
+      "一致"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "fine-penalty",
+    "kind": "word",
+    "word": "fine",
+    "context": "He paid a parking fine.",
+    "expectedAny": [
+      "罚款",
+      "罚金"
+    ],
+    "parts": [
+      "noun"
+    ]
+  },
+  {
+    "id": "fine-weather",
+    "kind": "word",
+    "word": "fine",
+    "context": "The weather is fine today.",
+    "expectedAny": [
+      "晴",
+      "好",
+      "宜人"
+    ],
+    "parts": [
+      "adjective"
+    ]
+  },
+  {
+    "id": "left-direction",
+    "kind": "word",
+    "word": "left",
+    "context": "Turn left at the next street.",
+    "expectedAny": [
+      "左"
+    ],
+    "parts": [
+      "adverb"
+    ]
+  },
+  {
+    "id": "left-departed",
+    "kind": "word",
+    "word": "left",
+    "context": "She left the office at noon.",
+    "expectedAny": [
+      "离开"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "right-correct",
+    "kind": "word",
+    "word": "right",
+    "context": "Your answer is right.",
+    "expectedAny": [
+      "正确",
+      "对"
+    ],
+    "parts": [
+      "adjective"
+    ]
+  },
+  {
+    "id": "record-noun",
+    "kind": "word",
+    "word": "record",
+    "context": "This is a new world record.",
+    "expectedAny": [
+      "纪录",
+      "记录"
+    ],
+    "parts": [
+      "noun"
+    ]
+  },
+  {
+    "id": "record-verb",
+    "kind": "word",
+    "word": "record",
+    "context": "Please record the meeting.",
+    "expectedAny": [
+      "记录",
+      "录音",
+      "录制"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "lead-metal",
+    "kind": "word",
+    "word": "lead",
+    "context": "Lead is a heavy metal.",
+    "expectedAny": [
+      "铅"
+    ],
+    "parts": [
+      "noun"
+    ]
+  },
+  {
+    "id": "lead-verb",
+    "kind": "word",
+    "word": "lead",
+    "context": "She will lead the team.",
+    "expectedAny": [
+      "领导",
+      "带领",
+      "引领"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "object-noun",
+    "kind": "word",
+    "word": "object",
+    "context": "A small object fell from the shelf.",
+    "expectedAny": [
+      "物",
+      "东西"
+    ],
+    "parts": [
+      "noun"
+    ]
+  },
+  {
+    "id": "object-verb",
+    "kind": "word",
+    "word": "object",
+    "context": "They object to the proposal.",
+    "expectedAny": [
+      "反对"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "present-gift",
+    "kind": "word",
+    "word": "present",
+    "context": "He gave her a birthday present.",
+    "expectedAny": [
+      "礼物"
+    ],
+    "parts": [
+      "noun"
+    ]
+  },
+  {
+    "id": "table-postpone",
+    "kind": "word",
+    "word": "table",
+    "context": "We will table the discussion until next month.",
+    "expectedAny": [
+      "搁置",
+      "推迟",
+      "暂缓"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "put-off",
+    "kind": "word",
+    "word": "put off",
+    "context": "We decided to put off the meeting until Friday.",
+    "expectedAny": [
+      "推迟",
+      "延期"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "give-up",
+    "kind": "word",
+    "word": "give up",
+    "context": "Do not give up when the task is difficult.",
+    "expectedAny": [
+      "放弃"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "carry-out",
+    "kind": "word",
+    "word": "carry out",
+    "context": "They will carry out the experiment tomorrow.",
+    "expectedAny": [
+      "执行",
+      "进行",
+      "实施"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "turn-down",
+    "kind": "word",
+    "word": "turn down",
+    "context": "She had to turn down the job offer.",
+    "expectedAny": [
+      "拒绝",
+      "婉拒"
+    ],
+    "parts": [
+      "verb"
+    ]
+  },
+  {
+    "id": "sense-bank-finance",
+    "kind": "sense",
+    "context": "She deposited cash at the bank.",
+    "senses": [
+      "a financial institution",
+      "the land beside a river",
+      "a tilt of an aircraft"
+    ],
+    "senseIndex": 1,
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "sense-bank-river",
+    "kind": "sense",
+    "context": "They sat on the river bank.",
+    "senses": [
+      "a financial institution",
+      "the land beside a river",
+      "a tilt of an aircraft"
+    ],
+    "senseIndex": 2,
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "sense-hold-cargo",
+    "kind": "sense",
+    "context": "It was stowed forward in the ship's hold.",
+    "senses": [
+      "grasp or carry with the hands",
+      "a compartment in a ship for cargo",
+      "keep someone detained"
+    ],
+    "senseIndex": 2,
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "sense-approach-method",
+    "kind": "sense",
+    "context": "This approach reduces repetition in the code.",
+    "senses": [
+      "movement closer to something",
+      "a method of dealing with a problem",
+      "an access road"
+    ],
+    "senseIndex": 2,
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "sense-light-weight",
+    "kind": "sense",
+    "context": "This suitcase is light.",
+    "senses": [
+      "giving illumination",
+      "having little weight",
+      "pale in color"
+    ],
+    "senseIndex": 2,
+    "partOfSpeech": "adjective"
+  },
+  {
+    "id": "sense-match-game",
+    "kind": "sense",
+    "context": "They won the football match.",
+    "senses": [
+      "a small stick used to start a fire",
+      "a sporting contest",
+      "a person or thing equal to another"
+    ],
+    "senseIndex": 2,
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "negated-reopened",
+    "kind": "sentence",
+    "context": "The shop has not reopened yet.",
+    "expectedAny": [
+      "重新",
+      "再",
+      "开"
+    ],
+    "requiredGroups": [
+      [
+        "未",
+        "没有",
+        "没",
+        "尚未",
+        "还没"
+      ]
+    ]
+  },
+  {
+    "id": "sentence-method",
+    "kind": "sentence",
+    "context": "This approach reduces repetition without changing the result.",
+    "expectedAny": [
+      "方法",
+      "方式",
+      "方案"
+    ],
+    "requiredGroups": [
+      [
+        "不",
+        "无",
+        "没有",
+        "未"
+      ]
+    ]
+  }
+]

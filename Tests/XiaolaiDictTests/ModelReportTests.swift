@@ -73,19 +73,29 @@ struct ModelReportIdleWatchTests {
     /// share of the interval and not equality with it.
     private static let wentAfter = Duration.seconds(19.75)
 
-    /// The shipped ten minutes is longer than a report is held open for, so the watch says it did
+    /// A configured ten minutes is longer than a report is held open for, so the watch says it did
     /// not watch one. **Skipped is not a pass** — the end-to-end gate asks for `observed` — and a
     /// watch that skipped must not have asked the service anything either, or the report carries
     /// answers from questions it never counted.
-    @Test func theShippedIntervalIsSkippedRatherThanQuietlyPassed() async throws {
+    @Test func aLongConfiguredIntervalIsSkippedRatherThanQuietlyPassed() async throws {
         let world = World()
-        world.idleSeconds = ModelIdle.defaultSeconds
+        world.idleSeconds = 600
         var report: [String: Any] = [:]
         let outcome = try await ModelReport.watchIdleUnload(world.watch, into: &report)
         #expect(outcome == .skipped)
         #expect(report["unloadWatch"] as? String == "skipped")
-        #expect(report["idleSeconds"] as? Int == ModelIdle.defaultSeconds)
+        #expect(report["idleSeconds"] as? Int == 600)
         #expect(world.statusQuestions == 0, "a skipped watch still asked the service something")
+    }
+
+    @Test func theDefaultIntervalCanBeWatchedWithoutAnOverride() async throws {
+        let world = World()
+        world.idleSeconds = ModelIdle.defaultSeconds
+        world.goesAfter = .seconds(ModelIdle.defaultSeconds)
+        world.statuses = [Self.status(loaded: false)]
+        var report: [String: Any] = [:]
+        #expect(try await ModelReport.watchIdleUnload(world.watch, into: &report) == .observed)
+        #expect(report["idleSeconds"] as? Int == 120)
     }
 
     /// The one outcome the gate accepts: the process went on its own interval, and the next

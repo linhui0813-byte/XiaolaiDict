@@ -33,6 +33,8 @@ enum LaunchMode: Equatable {
     /// `--model-status`: whether the bundled model service runs, and whether it can run MLX — one op
     /// evaluated on its GPU. Only the signed bundle can answer.
     case modelStatus
+    /// Ends only this app's model service, draining its outstanding requests first.
+    case modelUnload
     /// `--model-report`: the local model end to end — downloaded from ModelScope into the store if
     /// it is not there, then a sense answer and a translation through the service.
     case modelReport
@@ -68,6 +70,7 @@ enum LaunchArguments {
                XiaolaiDict --history-report
                XiaolaiDict --settings-report
                XiaolaiDict --model-status
+               XiaolaiDict --model-unload
                XiaolaiDict --model-report
                XiaolaiDict --sense-report
                XiaolaiDict --word-translation-report
@@ -92,6 +95,7 @@ enum LaunchArguments {
         case "--history-report": alone(arguments, is: .historyReport)
         case "--settings-report": alone(arguments, is: .settingsReport)
         case "--model-status": alone(arguments, is: .modelStatus)
+        case "--model-unload": alone(arguments, is: .modelUnload)
         case "--model-report": alone(arguments, is: .modelReport)
         case "--sense-report": alone(arguments, is: .senseReport)
         case "--word-translation-report": alone(arguments, is: .wordTranslationReport)

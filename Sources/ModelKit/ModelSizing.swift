@@ -11,13 +11,10 @@ import Foundation
 ///
 /// A pure function of two numbers, so every Mac it will meet can be tested without owning one.
 public enum ModelSizing {
-    /// A size is **offered** where its peak is at most a quarter of the Mac's memory. The reader's
-    /// own apps are the other three quarters, and a dictionary is the smallest thing they are
-    /// running. Against the measured process peaks that is a floor of **14.0 GB** — 4B peaks at
-    /// 3,585 MB, so a quarter of 16 GB (4,096) holds it and a quarter of 12 (3,072) does not — and
-    /// **25.9 GB** for 9B, so 32 GB and up offers both. Of the memory sizes Apple Silicon actually
-    /// ships, only **8 GB is offered nothing**: it reads with the engines it has, which is the
-    /// decision recorded on `LocalModelSize` rather than a gap to close by loosening this share.
+    /// A size is offered where its conservative process estimate is at most a quarter of
+    /// physical memory. The 4B estimate of 4,096 MiB fits 16 GiB and up; the historical
+    /// 9B estimate of 6,633 MiB fits 32 GiB and up. Keep this share independent of the
+    /// 1 GiB available-memory reserve. An 8 GiB Mac remains outside the local-model offer.
     public static let shareOfPhysicalMemory: UInt64 = 4
 
     /// What must be left free **after** loading, so the answer does not push the Mac into swap.

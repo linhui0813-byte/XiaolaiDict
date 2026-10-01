@@ -446,8 +446,8 @@ struct LocalModelControllerTests {
         let scratch = TemporaryDirectory(named: "xiaolaidict-standin")
         scratches.withLock { $0.append(scratch) }
         let store = ModelStore(root: scratch.url)
-        // 32 GB, and the 4,729 MB that was actually free when this was measured.
-        let free: UInt64 = 4_729 * 1_048_576
+        // 32 GiB physical; enough for the refreshed 4B estimate and reserve, but not 9B.
+        let free: UInt64 = 5 * Self.gigabyte
         let controller = LocalModelController(
             defaults: TemporaryDefaults.suite(), store: store,
             physicalMemory: 32 * Self.gigabyte, availableMemory: { free },

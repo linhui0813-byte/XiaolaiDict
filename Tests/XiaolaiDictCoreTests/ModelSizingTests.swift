@@ -14,7 +14,7 @@ struct ModelSizingTests {
     ///
     /// **18 and 36 are here because they exist** — the M3 Pro and the M4 Max ship them, and a table
     /// of round numbers would have covered neither. The tightest margins belong to the round ones:
-    /// 16 GB clears 4B's floor by 511 MB and 32 GB clears 9B's by 1,559, against 18's 1,023 and 36's
+    /// 16 GiB exactly fits 4B's conservative bound and 32 GiB clears 9B's by 1,559 MiB, against 18's 512 and 36's
     /// 2,583. So the boundary cases are 8/16 and 24/32, and these two say the odd configurations
     /// land where the arithmetic says they should.
     @Test(arguments: [
@@ -60,7 +60,7 @@ struct ModelSizingTests {
     }
 
     /// Memory the Mac has is not memory that is free. A 48 GB Mac with 3 GB available can load
-    /// nothing — 4B peaks at 3,585 MB and wants 1 GB left over; with 4B's peak plus that headroom
+    /// nothing — 4B is admitted against 4,096 MiB and wants 1 GiB left over; with 4B's peak plus that headroom
     /// free it may load 4B, and with 9B's, 9B too.
     @Test func lowFreeMemoryNarrowsWhatMayLoadNow() {
         let physical = 48 * Self.gigabyte
@@ -124,9 +124,9 @@ struct ModelSizingTests {
     /// the one thing keeping an answer from pushing the reader into swap, and a test that expresses
     /// both sides of a comparison in terms of the same constant cannot see it move. Pinning the value
     /// is what makes the boundary assertions mean a number rather than an identity.
-    @Test func thePeaksAreTheMeasuredProcessFootprints() {
+    @Test func theBoundsRetainMeasuredPeaksAndSafetyMargins() {
         #expect(LocalModelSize.allCases == [.standard, .large], "a size was added without a measured peak")
-        #expect(LocalModelSize.standard.peakMemory == 3_585 * 1_048_576)
+        #expect(LocalModelSize.standard.peakMemory == 4_096 * 1_048_576)
         #expect(LocalModelSize.large.peakMemory == 6_633 * 1_048_576)
         #expect(ModelSizing.headroom == 1_024 * 1_048_576, "the reserve that keeps the reader out of swap moved")
         #expect(ModelSizing.shareOfPhysicalMemory == 4, "the share of memory a model may take moved")

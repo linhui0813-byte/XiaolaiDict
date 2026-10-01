@@ -1,17 +1,10 @@
 import Foundation
 import FoundationModels
 import LocalModel
+import LocalModelRuntime
 import MLX
-import MLXFoundationModels
-import MLXHuggingFace
-import MLXLLM
-import MLXLMCommon
 import ModelKit
 import Synchronization
-// `#huggingFaceTokenizerLoader()` expands to a type that stores `any Tokenizer`, which the package
-// does not mark `Sendable`; under Swift 6 that is an error inside the expansion, where it cannot be
-// edited (the MLX-in-XPC spike, S4). Hence `@preconcurrency`.
-@preconcurrency import Tokenizers
 import XiaolaiDictBase
 import XiaolaiDictPeer
 import XPC
@@ -47,15 +40,10 @@ func gpuCheck() -> String? {
 /// downloader — with guided generation declared and reasoning not, which is what keeps Qwen3.5's
 /// thinking off (measured: no `<think>` output and short answers in every run).
 ///
-/// `FoundationModels.LanguageModel` by its full name: `MLXLMCommon` has a `LanguageModel` of its own
-/// — a model architecture, not the protocol a session takes.
 func mlxModel(at directory: URL, size: LocalModelSize) -> any FoundationModels.LanguageModel {
     log.notice("loading Qwen3.5 \(size.parameters, privacy: .public) from \(directory.lastPathComponent, privacy: .public)")
-    return MLXLanguageModel(
-        configuration: ModelConfiguration(directory: directory),
-        capabilities: [.guidedGeneration],
-        weightsLocation: { _ in directory },
-        load: { _, _ in try await loadModelContainer(from: directory, using: #huggingFaceTokenizerLoader()) })
+    let configured = UserDefaults.standard.persistentDomain(forName: XiaolaiDictIdentity.app)?[ModelMemoryPolicy.defaultsKey] as? Int
+    return ModelBackend.model(at: directory, cacheMiB: ModelMemoryPolicy.cacheMiB(configured: configured))
 }
 
 let service = ModelService(store: .standard(), makeModel: mlxModel, gpu: gpuCheck)
