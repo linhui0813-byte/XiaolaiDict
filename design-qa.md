@@ -141,5 +141,28 @@ The previous and current ad-hoc signatures have different designated requirement
 its own code hash. This is consistent with the old grant not applying to the rebuilt app. Apple
 documents that ad-hoc signing cannot preserve privacy authorization across different builds:
 [TN3127: Inside Code Signing: Requirements](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements).
-The current grant is refreshed, but future rebuilt versions may require a fresh grant. A stable
+The Accessibility grant is refreshed, but future rebuilt versions may require a fresh grant. A stable
 certificate-based signing identity has not been configured.
+
+### Screen Recording authorization recovery
+
+Hui subsequently reported repeated macOS Screen Recording dialogs. The preceding shortcut tests
+had exercised Accessibility only; they did not establish a working Screen Recording grant.
+The existing Screen Recording switch was enabled, but it had not been re-registered for this build.
+
+With Hui's existing approval to restore both permissions, the app was stopped and only
+`com.linhui.huidict`'s ScreenCapture approval was reset with `tccutil`. System Settings removed that
+entry. The exact installed app at `~/Applications/HuiDict.app` was then added again and its new
+Screen Recording entry showed enabled. Other apps' permission entries were not changed.
+
+After relaunch, HuiDict's own Permissions pane reported Accessibility On, Screen Recording On,
+and "Everything needed has been granted." Leaving the pane and returning produced the same
+result. This check calls ScreenCaptureKit's `SCShareableContent`, the API used by the capture path,
+rather than relying only on the System Settings switch.
+The app was then stopped and reopened once more. Its new process reported the same two On states
+without another authorization dialog, establishing that the refreshed grants survived restart.
+
+The synthetic image was opened in Preview for a capture test. Preview subsequently exposed Live
+Text through Accessibility, so the image alone cannot establish that HuiDict used OCR. The initial
+selection shortcut reported no selection, and the subsequent Option-only attempt produced no
+lookup card. A successful OCR hover lookup has not been verified in this recovery check.
