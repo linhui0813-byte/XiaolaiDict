@@ -1,6 +1,6 @@
 # Compact lookup design QA
 
-Final result: blocked pending interactive verification and a production build.
+Final result: pass for the native view. Production build and deployment remain blocked.
 
 The visual comparison passes. The target is Hui's supplied `refused` lookup screenshot. The
 implementation is the actual native SwiftUI card rendered with synthetic bilingual fixture data.
@@ -32,6 +32,10 @@ again, and a new request starts compact.
   definition deduplication, native layout, larger text, height limits, existing selection behavior,
   control wiring, source string coverage, and design token checks.
 - Native renders were inspected in compact, expanded, large-text, and dark states.
+- After Hui approved opening the local fixture preview, live native UI checks passed: More meanings
+  expanded the same card, details scrolled to the existing actions, collapse restored the compact
+  view, a new request reset the disclosure, and close ended the preview. These checks exercised
+  the actual views with fixture data; they did not exercise dictionary or model services.
 - Swift syntax parsing and `git diff --check` passed.
 
 These are view-only checks, not a production build. They used an isolated temporary package with
@@ -45,9 +49,6 @@ and the catalog compilation test requires the unavailable `xcstringstool`.
 
 ## Remaining verification
 
-- Automatic approval review rejected opening the locally built preview for interactive testing
-  because it is an unrecognized app requiring action-time approval. More meanings, collapse,
-  new-request reset, and close have not yet been tested through the live UI.
 - A production macOS 27 build is blocked by missing Foundation Models and SwiftUI compiler
   plugins. The selected Command Line Tools also lack the Metal compiler and catalog compiler.
 - No valid code-signing identity is available. The installed signed app has not been replaced;
