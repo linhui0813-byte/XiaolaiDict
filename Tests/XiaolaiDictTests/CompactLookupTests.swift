@@ -26,6 +26,8 @@ struct CompactLookupTests {
         let quick = CompactLookupSummary(card: original)
         #expect(quick.senses.first == chosen)
         #expect(quick.senses.count == 3)
+        #expect(quick.groups.map(\.partOfSpeech) == ["v."])
+        #expect(quick.groups.first?.labels == ["拒绝", "other meaning 1", "other meaning 2"])
         #expect(!quick.isUncertain)
         #expect(original.alternatives == other, "the quick preview must not truncate the detailed card")
         #expect(original.senseToKeep?.standing == .confirmed)
@@ -35,6 +37,7 @@ struct CompactLookupTests {
         let original = card(.undecided(reason: nil), alternatives: [sense("a", "拒绝"), sense("b", "拒收")])
         let quick = CompactLookupSummary(card: original)
         #expect(quick.senses.map(\.label) == ["拒绝", "拒收"])
+        #expect(quick.groups.first?.text == "拒绝；拒收")
         #expect(quick.isUncertain)
         #expect(original.leadingSense == nil)
         #expect(original.senseToKeep == nil)
@@ -51,10 +54,15 @@ struct CompactLookupTests {
 
     @Test func duplicateDefinitionsLeaveRoomForDistinctPartsOfSpeech() {
         let original = card(.undecided(reason: nil), alternatives: [
-            sense("empty", "  "), sense("a", "拒绝"), sense("repeat", "拒绝"),
+            sense("empty", "  "), sense("a", "继续", partOfSpeech: "transitive verb"),
+            sense("repeat", " 继续 ", partOfSpeech: "intransitive verb"),
             sense("adj", "拒绝", partOfSpeech: "adjective"), sense("b", "拒收"),
         ])
-        #expect(CompactLookupSummary(card: original).senses.map(\.key) == ["a", "adj", "b"])
+        let quick = CompactLookupSummary(card: original)
+        #expect(quick.senses.map(\.key) == ["a", "adj", "b"])
+        #expect(quick.groups.map(\.partOfSpeech) == ["v.", "adj."])
+        #expect(quick.groups.map(\.text) == ["继续；拒收", "拒绝"])
+        #expect(original.alternatives[2].partOfSpeech == "intransitive verb")
         #expect(original.alternatives.count == 5)
     }
 

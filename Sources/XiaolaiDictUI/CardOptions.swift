@@ -92,7 +92,7 @@ enum PartOfSpeechLabel {
     static func compact(_ stored: String?) -> String? {
         switch stored {
         case "noun": "n."
-        case "verb": "v."
+        case "verb", "transitive verb", "intransitive verb": "v."
         case "adjective": "adj."
         case "adverb": "adv."
         default: stored

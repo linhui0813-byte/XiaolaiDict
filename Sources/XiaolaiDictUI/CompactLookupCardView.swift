@@ -16,7 +16,9 @@ struct CompactLookupSummary: Equatable {
         var seen = Set<Meaning>()
         senses = Array((first + card.alternatives).filter { sense in
             !sense.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                && seen.insert(Meaning(partOfSpeech: sense.partOfSpeech, label: sense.label)).inserted
+                && seen.insert(Meaning(
+                    partOfSpeech: PartOfSpeechLabel.compact(sense.partOfSpeech),
+                    label: sense.label.trimmingCharacters(in: .whitespacesAndNewlines))).inserted
         }.prefix(Token.Panel.compactMeaningLimit))
         switch card.answer {
         case .ambiguous: isUncertain = true
@@ -24,6 +26,27 @@ struct CompactLookupSummary: Equatable {
         case .undecided: isUncertain = !senses.isEmpty
         default: isUncertain = false
         }
+    }
+
+    /// The quick card groups grammar variants; the detailed card keeps each publisher sense.
+    var groups: [MeaningGroup] {
+        var result: [MeaningGroup] = []
+        for sense in senses {
+            let partOfSpeech = PartOfSpeechLabel.compact(sense.partOfSpeech)
+            let label = sense.label.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let index = result.firstIndex(where: { $0.partOfSpeech == partOfSpeech }) {
+                result[index].labels.append(label)
+            } else {
+                result.append(MeaningGroup(partOfSpeech: partOfSpeech, labels: [label]))
+            }
+        }
+        return result
+    }
+
+    struct MeaningGroup: Equatable {
+        let partOfSpeech: String?
+        var labels: [String]
+        var text: String { labels.joined(separator: "；") }
     }
 
     private struct Meaning: Hashable {
@@ -111,13 +134,13 @@ struct CompactLookupCardView: View {
     private var meanings: some View {
         if !summary.senses.isEmpty {
             VStack(alignment: .leading, spacing: scale.space.stack) {
-                ForEach(Array(summary.senses.enumerated()), id: \.offset) { _, sense in
+                ForEach(Array(summary.groups.enumerated()), id: \.offset) { _, group in
                     HStack(alignment: .firstTextBaseline, spacing: scale.space.inline) {
-                        if let partOfSpeech = PartOfSpeechLabel.compact(sense.partOfSpeech) {
+                        if let partOfSpeech = group.partOfSpeech {
                             Text(verbatim: partOfSpeech)
                                 .foregroundStyle(.secondary)
                         }
-                        Text(verbatim: sense.label)
+                        Text(verbatim: group.text)
                     }
                     .font(.system(size: scale.text.body))
                     .lineLimit(Token.Panel.compactMeaningLines)

@@ -94,3 +94,52 @@ was restored after the test. The setup window still carries the upstream name in
 
 The installed bundle passed signature, resource and service verification again after launch.
 The local app is not notarized for public distribution.
+
+## Grouped compact grammar refinement
+
+Final result: passed native rendering, focused tests and live shortcut checks; rebuilt and installed locally.
+
+Hui's `continues` screenshots identified redundant transitive and intransitive verb labels.
+The compact view now abbreviates both as `v.`, groups meanings under one part-of-speech label,
+and removes duplicate definitions across those verb variants before applying the three-meaning
+preview limit. Meanings with distinct parts of speech remain in separate groups. Original sense
+keys, grammatical labels, selection standing and all detailed meanings are preserved.
+
+![Grouped compact lookup with synthetic bilingual data](docs/compact-grouped-lookup.png)
+
+The native `continues` fixture now shows `v. 继续；持续` once instead of three verb rows. The
+standard outer frame is 321 × 224 points; larger text is 401 × 262 points. Light, dark and larger
+text renders were inspected. The uncertainty cue and More meanings remain visible.
+
+- 23 focused Swift tests passed, including duplicate removal across verb variants, grouping,
+  confirmed-sense priority, separate parts of speech, unchanged detailed sense data, disclosure
+  selection and native layout at larger text sizes.
+- The optimized local app was rebuilt as `2026.1001.72326`. Bundle verification passed, and its
+  real dictionary service returned entries for `continues`. The installed copy passed the same
+  verification, matched all three rebuilt executable hashes and returned the lookup in 114 ms.
+- The installed update preserves the previous signed app in
+  `.build/huidict-install-backups/2026.1001.44832/HuiDict.app`. Its two installation moves were
+  recorded in the IT Guy undo manifest before replacement.
+
+The live control checks in the preceding section describe the previous installed build. The
+grouped refinement was verified through actual SwiftUI renders and focused tests. Hui approved
+reopening it. A physical Control + Option + D lookup now opens the actual `continues` card with
+`v. 继续；持续；继续走` on one line. More meanings reveals the original grammatical labels,
+all other senses, context and publisher examples; Fewer details restores the compact view.
+A second physical shortcut lookup of `discussion` opened without another permission prompt and
+reset the expanded view to the compact `n.` summary. Close dismissed the lookup window.
+
+### Accessibility authorization recovery
+
+The rebuilt app initially reported missing Accessibility access despite its existing enabled
+switch. Hui approved restoring both lookup permissions. Toggling the existing entry and restarting
+did not fix the denial. Removing HuiDict's Accessibility entry, adding the exact installed path
+`~/Applications/HuiDict.app`, and restarting did: Hui's physical shortcut opened a real lookup
+without the authorization error. Screen Recording remained enabled; its entry was not removed.
+
+The previous and current ad-hoc signatures have different designated requirements, each tied to
+its own code hash. This is consistent with the old grant not applying to the rebuilt app. Apple
+documents that ad-hoc signing cannot preserve privacy authorization across different builds:
+[TN3127: Inside Code Signing: Requirements](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements).
+The current grant is refreshed, but future rebuilt versions may require a fresh grant. A stable
+certificate-based signing identity has not been configured.
