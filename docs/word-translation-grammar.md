@@ -23,7 +23,8 @@ text sizes in light and dark appearance. It is separate from the real model veri
 ## Verified model results
 
 Build `2026.1001.111354` passed all 13 real-model checks in two fresh processes on October 1
-using the existing local Qwen model, without a download. The full Swift suite reported 2,047 passing tests across seven
+using the existing local Qwen model, without a download. The full Swift suite reported 2,047
+passing tests across seven
 targets; optional dictionary fixtures and stale pre-build bundle fixtures were skipped. The
 completed bundle passed strict signature checks and both update-identity compatibility gates.
 
@@ -50,9 +51,14 @@ attribution alone does not prove the GUI app's saved permissions.
 
 The subsequent installed-copy model check was blocked by available memory below the model's
 4.83 GB loading requirement, not by a translation or grammar failure. The memory guard remains
-intact. Native automation also reported `Sky Computer Use native pipe startup failed`; normal
-GUI launch and permission verification require a manual launch while that tool is unavailable.
-The shortcut and Option-hover gestures have not been manually repeated for this update.
+intact. The installed check remained memory-blocked after opening the GUI app.
+
+Native automation reported `Sky Computer Use native pipe startup failed`, so Hui manually opened
+the installed app. At 19:19:19 on October 1, HuiDict process `75875` was the responsible process
+for TCC decisions of `Allowed (System Set)` for both Accessibility and Screen Recording, with
+`DB Action:None`. macOS accepted the unchanged certificate-based requirement with status `0`.
+This verifies the GUI app retained its own grants after the update without resetting permissions.
+An additional GUI restart, shortcut test, and Option-hover test were not performed in this check.
 
 ## Reproduce the model check
 
