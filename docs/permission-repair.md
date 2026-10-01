@@ -34,10 +34,25 @@ Signing credentials are stored outside the repository and are not published.
 - Installed executable SHA-256:
   `57935b947348d1deccfdaed0d0b037f646626bf48eb2b14a08457aa5b37e58be`.
 
-Switching from the previous ad-hoc signer requires replacing HuiDict's own Accessibility and
-Screen Recording entries once. Keep the Signing folder for subsequent updates. A live permission
-and lookup check is still required after that replacement; an enabled Settings switch alone is
-insufficient evidence that the running process can capture.
+## Installed app verification
+
+The October 1 permission refresh was completed for the installed app at
+`~/Applications/HuiDict.app`:
+
+- Its stale Screen Recording entry was removed and the installed app was re-added.
+- Re-adding the existing Accessibility entry initially left the app reporting Accessibility Off.
+  `tccutil reset Accessibility com.linhui.huidict` removed only HuiDict's stale record; re-adding
+  the installed app then made its Permissions pane report both permissions On.
+- After quitting and reopening the same build, macOS accepted the certificate-based requirement
+  with status `0` and reported `Allowed (System Set)` for both `kTCCServiceAccessibility` and
+  `kTCCServiceScreenCapture` in the new process. Repeated capture permission checks were allowed.
+- The previous build's code-hash requirement had failed with status `-67050`. The new process
+  no longer depends on that requirement. Other apps' permission entries were left unchanged.
+
+This verifies the running app's effective permissions and their persistence across a normal
+restart. The global shortcut and Option-hover gesture were not manually repeated in this repair
+check. Keep the Signing folder for subsequent updates; replacing the certificate requires
+refreshing HuiDict's permission entries again.
 
 Apple documents compatible app identity and permission sharing in
 [TN3127](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements).
