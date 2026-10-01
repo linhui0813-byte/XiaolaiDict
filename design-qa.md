@@ -70,6 +70,27 @@ workarounds are used in the packaged app.
 - The existing primary dictionary choice was copied to HuiDict. HuiDict has separate preferences,
   history and model storage, and its local build does not require a paid Developer ID.
 
-The live compact/expanded control checks above still describe the approved fixture preview.
-Screen word capture in HuiDict requires its own Accessibility and Screen Recording grants and
-has not yet been verified. The local app is not notarized for public distribution.
+## Installed HuiDict UI verification
+
+On 2026-10-01, Hui approved opening the installed app. Its setup board reported Accessibility,
+Screen Recording and the Oxford English–Chinese dictionary ready. The original XiaolaiDict was
+still running and held the default shortcut. After Hui quit that app, opening and cancelling
+HuiDict's shortcut recorder restored the existing Control + Option + D registration; the setup
+board then reported it ready. The optional 3.06 GB model download was deferred for word lookup.
+
+Hui manually triggered Option-hover and left the card visible. Native UI inspection verified a
+real `offer` lookup from TextEdit, with pronunciation and short Chinese meanings from the actual
+dictionary service. More meanings expanded the same panel to its other senses, captured context
+and publisher examples. Fewer details restored the compact view. The expanded content scrolled
+to the dictionary selector and existing study actions within the height cap. A subsequent
+`invitation` lookup reset the expanded panel to the compact view. Close lookup dismissed the
+window while HuiDict stayed running.
+
+The automation tool's simulated global shortcut entered a control character in the temporary
+TextEdit sample instead of invoking the hot key, so shortcut registration is verified but its
+physical-key behavior is not. Option-hover was triggered by Hui; the card and disclosure controls
+were inspected and operated through native accessibility automation. The temporary sample text
+was restored after the test. The setup window still carries the upstream name in its title.
+
+The installed bundle passed signature, resource and service verification again after launch.
+The local app is not notarized for public distribution.
