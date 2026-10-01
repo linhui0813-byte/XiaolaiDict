@@ -11,6 +11,7 @@
 # Environment:
 #   XIAOLAIDICT_SIGN_ID       Developer ID Application identity (required; see the Makefile for why)
 #   HUIDICT_LOCAL_BUILD=1     separate HuiDict app, locally signed, with exact code-hash peer checks
+#   HUIDICT_SIGNING_DIR       persistent local certificate/keychain (default: HuiDict app support)
 #   XIAOLAIDICT_BUILD_NUMBER  CFBundleVersion for a release: a positive integer from the release counter.
 #                      Unset, a development build is numbered from the UTC clock.
 #
@@ -23,11 +24,20 @@ cd "$(dirname "$0")/.."
 # The explicit local fork has its own identity, cache, staging and output. The default Developer
 # ID path never silently falls back to ad-hoc signing.
 readonly LOCAL_BUILD=${HUIDICT_LOCAL_BUILD:-0}
+readonly LOCAL_SIGNING_DIR=${HUIDICT_SIGNING_DIR:-"$HOME/Library/Application Support/HuiDict/Signing"}
+readonly LOCAL_KEYCHAIN="$LOCAL_SIGNING_DIR/local-signing.keychain-db"
 case "$LOCAL_BUILD" in
     0) APP_NAME=XiaolaiDict; BUNDLE_ID=com.xiaolaidict; BUILD_ROOT=.build; STAGE_ROOT=.build/stage; RESOURCES=.build/resources ;;
     1) APP_NAME=HuiDict; BUNDLE_ID=com.linhui.huidict; BUILD_ROOT=.build/huidict-swift; STAGE_ROOT=.build/huidict-stage; RESOURCES=.build/huidict-resources
        [ -z "${XIAOLAIDICT_BUILD_NUMBER:-}" ] || { echo "error: local builds cannot be notarized releases" >&2; exit 1; }
-       export XIAOLAIDICT_SIGN_ID=- ;;
+       if [ -f "$LOCAL_SIGNING_DIR/identity.sha1" ]; then
+           XIAOLAIDICT_SIGN_ID=$(tr -d '\r\n' < "$LOCAL_SIGNING_DIR/identity.sha1")
+           [[ "$XIAOLAIDICT_SIGN_ID" =~ ^[[:xdigit:]]{40}$ ]] \
+               || { echo "error: invalid HuiDict local certificate fingerprint" >&2; exit 1; }
+       else
+           XIAOLAIDICT_SIGN_ID=-
+       fi
+       export XIAOLAIDICT_SIGN_ID ;;
     *) echo "error: HUIDICT_LOCAL_BUILD must be 0 or 1" >&2; exit 1 ;;
 esac
 readonly APP_NAME BUNDLE_ID BUILD_ROOT STAGE_ROOT RESOURCES
@@ -207,7 +217,7 @@ bundle_inputs_digest() {
         # rebuild every time. A release number is an input.
         printf '%s\0' "$CONFIG" "$BUNDLE_ID" "$XIAOLAIDICT_SIGN_ID" "${XIAOLAIDICT_BUILD_NUMBER:-}"
         find Sources Strings "$RESOURCES" Package.swift Makefile Tools/build-bundle.sh \
-            Tools/third-party-notices.sh -type f -print0 | digest_files
+            Tools/third-party-notices.sh Tools/local-signing.py -type f -print0 | digest_files
         [ ! -f Package.resolved ] || printf 'Package.resolved\0' | digest_files
     } | shasum -a 256 | cut -d' ' -f1
 }
@@ -501,8 +511,13 @@ verify_signatures() {
         local described
         described=$(codesign -dvvv "$part" 2>&1 || true)
         if [ "$LOCAL_BUILD" = 1 ]; then
-            grep -q '^Signature=adhoc' <<<"$described" \
-                || { echo "$part is not locally signed"; return 1; }
+            if [ "$XIAOLAIDICT_SIGN_ID" = - ]; then
+                grep -q '^Signature=adhoc' <<<"$described" \
+                    || { echo "$part is not locally signed"; return 1; }
+            else
+                python3 Tools/local-signing.py verify "$part" --identity "$XIAOLAIDICT_SIGN_ID" \
+                    || { echo "$part is not signed by the persistent HuiDict certificate"; return 1; }
+            fi
             grep -q 'flags=.*runtime' <<<"$described" \
                 || { echo "$part has no hardened runtime"; return 1; }
             continue
@@ -541,12 +556,16 @@ verify_signatures() {
 # silent tries.
 sign_part() {  # $1: the timestamp option; $2: the code object to sign
     local stamp=$1 part=$2 attempt
+    local arguments=(--force --options runtime "$stamp" --sign "$XIAOLAIDICT_SIGN_ID")
+    if [ "$LOCAL_BUILD" = 1 ] && [ "$XIAOLAIDICT_SIGN_ID" != - ]; then
+        arguments+=(--keychain "$LOCAL_KEYCHAIN")
+    fi
     for (( attempt = 1; attempt <= SIGN_TRIES; attempt++ )); do
         if (( attempt == SIGN_TRIES )); then
-            codesign --force --options runtime "$stamp" --sign "$XIAOLAIDICT_SIGN_ID" "$part" >/dev/null
+            codesign "${arguments[@]}" "$part" >/dev/null
             return
         fi
-        codesign --force --options runtime "$stamp" --sign "$XIAOLAIDICT_SIGN_ID" "$part" >/dev/null 2>&1 && return
+        codesign "${arguments[@]}" "$part" >/dev/null 2>&1 && return
         note "signing $(basename "$part") failed on attempt $attempt of $SIGN_TRIES — retrying"
         sleep $(( attempt * 2 ))
     done
@@ -914,6 +933,10 @@ publish() {
 # Builds and publishes unless the published bundle already matches its inputs and verifies.
 build() {
     [ -n "${XIAOLAIDICT_SIGN_ID:-}" ] || fail "XIAOLAIDICT_SIGN_ID is not set"
+    if [ "$LOCAL_BUILD" = 1 ] && [ "$XIAOLAIDICT_SIGN_ID" != - ]; then
+        python3 Tools/local-signing.py unlock --directory "$LOCAL_SIGNING_DIR" \
+            || fail "could not unlock HuiDict's local signing keychain"
+    fi
     if [ "$LOCAL_BUILD" = 0 ]; then ensure_icon; fi
     snapshot_resources
     local digest

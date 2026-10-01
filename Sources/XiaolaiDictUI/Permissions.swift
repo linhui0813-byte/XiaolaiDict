@@ -17,7 +17,7 @@ import ScreenCaptureKit
 /// answered nothing is a failure carrying its own reason, never the other side's answer.
 public enum PermissionProbe: Sendable, Equatable {
     case granted
-    /// The reader said no. macOS prompts only once, so there is somewhere to send them instead.
+    /// Access is not granted to the current process; the reader can enable it in Settings.
     case declined
     /// The probe failed for a reason that is not a refusal — so it says nothing about consent.
     case couldNotTell
@@ -100,22 +100,8 @@ public enum Permission: String, CaseIterable, Sendable, Identifiable {
 
     /// Whether macOS has granted it, asked **the way the feature asks**.
     ///
-    /// **It does not prompt once the question has been answered, which is not the same as never
-    /// prompting.** `SCShareableContent` is what the recogniser captures through, and on a Mac
-    /// where the reader has never been asked, macOS may put its consent dialog up for it. That is
-    /// correct behaviour for a capture and wrong for a status check that runs on a menu refresh —
-    /// recorded here rather than claimed away, because the previous wording said "Neither path
-    /// prompts" and an audit was right to call it.
-    ///
-    /// Screen Recording is checked by calling `SCShareableContent` — the same API the recogniser
-    /// uses — rather than `CGPreflightScreenCaptureAccess()`. Not because the two were seen to
-    /// disagree: they were not, and an earlier version of this comment claimed so on a
-    /// misdiagnosis. The reason is that a probe answering from a different API than the feature
-    /// *can* diverge from it, and the whole value of this window is that its answer matches what
-    /// the reader will actually experience. Asking the same question rules the divergence out
-    /// rather than hoping.
-    ///
-    /// The cost is the recogniser's own: ~70 ms for on-screen windows only.
+    /// Screen Recording uses a silent preflight before asking ScreenCaptureKit to verify access.
+    /// An ungranted or stale app identity must not trigger the system dialog during status polling.
     public var isGranted: Bool {
         get async {
             let answer: PermissionProbe = await probe
@@ -138,48 +124,57 @@ public enum Permission: String, CaseIterable, Sendable, Identifiable {
     /// project already measured the capture subsystem at 14.8 s for a first read against ~0.5 s
     /// after.
     ///
-    /// So a refusal is `SCStreamErrorUserDeclined` and nothing else. Anything else is
-    /// `couldNotTell`, which is not an answer about the reader's consent and must not be reported
-    /// as one.
+    /// A negative preflight means this process has no effective grant. After a positive preflight,
+    /// only `SCStreamErrorUserDeclined` means refusal; other capture failures are `couldNotTell`.
     public var probe: PermissionProbe {
         get async {
             switch self {
             case .accessibility:
                 return Self.accessibilityTrust
             case .screenRecording:
-                do {
-                    // **Bounded.** This is a call into another process, and it has no timeout of its
-                    // own. `PermissionsReport.probe` is awaited by the menu's refresh, by the setup
-                    // board's polling, and by `askForDictionaries()` before dictionary discovery —
-                    // so a capture service that stops answering used to stall all three with no
-                    // way out. A probe that does not return in time has not said anything about
-                    // consent, which is exactly `couldNotTell`.
-                    try await withDeadline(Token.Timing.permissionProbe) {
-                        // Answers `Void`, not the content: `SCShareableContent` is not `Sendable`,
-                        // and nothing here wants it — only that the call was allowed to return.
-                        _ = try await SCShareableContent.excludingDesktopWindows(
-                            false, onScreenWindowsOnly: true)
-                    }
-                    return .granted
-                // The SDK's own symbol, never the number behind it: `SCStreamErrorUserDeclined`
-                // is the one code in that domain that is a statement about the reader's consent —
-                // every other code there is about the capture — and spelling it out keeps this
-                // tied to the SDK rather than to a literal that has to be re-checked.
-                } catch let error as NSError
-                            where error.domain == SCStreamErrorDomain
-                            && error.code == SCStreamError.Code.userDeclined.rawValue {
-                    return .declined
-                } catch {
-                    // **Kept, not swallowed.** `couldNotTell` preserves that something went wrong
-                    // and loses what — which is the one thing worth knowing when this fires. The
-                    // domain and code are the diagnosis; the message may carry a path, so it is
-                    // not logged.
-                    let failure = error as NSError
-                    Logger(subsystem: XiaolaiDictIdentity.app, category: "permissions").error(
-                        "screen-recording probe failed: \(failure.domain, privacy: .public) \(failure.code, privacy: .public)")
-                    return .couldNotTell
-                }
+                return await Self.screenRecordingProbe()
             }
+        }
+    }
+
+    /// The status API cannot request permission. Only an effective grant permits a capture probe.
+    public static func screenRecordingProbe(
+        preflight: @Sendable () -> Bool = { CGPreflightScreenCaptureAccess() },
+        capture: @escaping @Sendable () async throws -> Void = {
+            _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        }
+    ) async -> PermissionProbe {
+        guard preflight() else { return .declined }
+        do {
+            // **Bounded.** This is a call into another process, and it has no timeout of its
+            // own. `PermissionsReport.probe` is awaited by the menu's refresh, by the setup
+            // board's polling, and by `askForDictionaries()` before dictionary discovery —
+            // so a capture service that stops answering used to stall all three with no
+            // way out. A probe that does not return in time has not said anything about
+            // consent, which is exactly `couldNotTell`.
+            try await withDeadline(Token.Timing.permissionProbe) {
+                // Answers `Void`, not the content: `SCShareableContent` is not `Sendable`,
+                // and nothing here wants it — only that the call was allowed to return.
+                try await capture()
+            }
+            return .granted
+        // The SDK's own symbol, never the number behind it: `SCStreamErrorUserDeclined`
+        // is the one code in that domain that is a statement about the reader's consent —
+        // every other code there is about the capture — and spelling it out keeps this
+        // tied to the SDK rather than to a literal that has to be re-checked.
+        } catch let error as NSError
+                    where error.domain == SCStreamErrorDomain
+                    && error.code == SCStreamError.Code.userDeclined.rawValue {
+            return .declined
+        } catch {
+            // **Kept, not swallowed.** `couldNotTell` preserves that something went wrong
+            // and loses what — which is the one thing worth knowing when this fires. The
+            // domain and code are the diagnosis; the message may carry a path, so it is
+            // not logged.
+            let failure = error as NSError
+            Logger(subsystem: XiaolaiDictIdentity.app, category: "permissions").error(
+                "screen-recording probe failed: \(failure.domain, privacy: .public) \(failure.code, privacy: .public)")
+            return .couldNotTell
         }
     }
 
@@ -196,9 +191,8 @@ public enum Permission: String, CaseIterable, Sendable, Identifiable {
         AXIsProcessTrusted() ? .granted : .declined
     }
 
-    /// Asks macOS to prompt. It does so **only once per permission, ever** — after a refusal there
-    /// is no second prompt and the reader has to use Settings, which is why every refusal here
-    /// carries a location.
+    /// Explicitly asks macOS for access. Status checks never call this, and the automatic capture
+    /// gate limits requests to one per process; a refused lookup names the Settings location.
     @discardableResult
     public func request() -> Bool {
         switch self {

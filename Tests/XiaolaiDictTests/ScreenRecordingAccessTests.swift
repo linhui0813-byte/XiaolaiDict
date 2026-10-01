@@ -6,12 +6,7 @@ import XiaolaiDictTestSupport
 @testable import XiaolaiDict
 @testable import XiaolaiDictUI
 
-/// Asking for Screen Recording, which XiaolaiDict never did.
-///
-/// Accessibility is asked for with a prompt; Screen Recording was assumed. ScreenCaptureKit does
-/// not prompt on its own — it fails with "the user declined TCCs" — so a reader who has not granted
-/// it gets nothing from the recogniser and is never told why. Measured on the E2E machine, where
-/// every Accessibility stage passed and the one capture path could not run.
+/// Capture retries must not reopen permission dialogs, even when lookups overlap.
 struct ScreenRecordingAccessTests {
     private func access(
         _ found: PermissionProbe, grantedByAsking: Bool = false
@@ -47,7 +42,26 @@ struct ScreenRecordingAccessTests {
     /// the reader has to be sent to Settings, which is why the refusal carries a location.
     @Test func aRefusalIsReportedRatherThanRetriedForever() async {
         let (permission, counter) = access(.declined, grantedByAsking: false)
+        for _ in 0..<5 { #expect(await permission.ensure() == .declined) }
+        #expect(counter.asks == 1)
+    }
+
+    @Test func concurrentLookupsShareOnePermissionRequest() async {
+        let (permission, counter) = access(.declined)
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<20 { group.addTask { _ = await permission.ensure() } }
+        }
+        #expect(counter.asks == 1)
+    }
+
+    @Test func grantingInSettingsIsDetectedWithoutASecondRequest() async {
+        let found = Mutex(PermissionProbe.declined)
+        let counter = Counter()
+        let permission = ScreenRecordingAccess(probe: { found.withLock { $0 } },
+                                               request: { counter.bump(); return false })
         #expect(await permission.ensure() == .declined)
+        found.withLock { $0 = .granted }
+        #expect(await permission.ensure() == .granted)
         #expect(counter.asks == 1)
     }
 
@@ -115,19 +129,8 @@ struct ScreenRecordingLocationTests {
     }
 }
 
-/// One question, asked in one place.
-///
-/// `Permission.isGranted` probes Screen Recording with `SCShareableContent` — the API the
-/// recogniser actually captures through — while `ScreenRecordingAccess` asked
-/// `CGPreflightScreenCaptureAccess()`. Two APIs answering one question is how a setup checklist
-/// comes to draw a tick while hover still refuses.
-///
-/// **The assertion is mechanical because a behavioural one cannot fail here.** On any machine
-/// where the permission is granted both APIs answer true, so a test comparing them passes
-/// vacuously — against the divergence as much as against the fix. What can fail is the presence of
-/// the second API: `CGPreflightScreenCaptureAccess` is the one that does not match the capture, so
-/// it must appear in `Sources` nowhere at all. Every caller goes through
-/// `Permission.screenRecording` instead.
+/// All status surfaces use one silent preflight, then verify a granted capture path.
+/// Calling ScreenCaptureKit before that preflight can itself raise a system dialog.
 struct ScreenRecordingProbeTests {
     private var sources: URL {
         URL(fileURLWithPath: #filePath)
@@ -135,7 +138,7 @@ struct ScreenRecordingProbeTests {
             .appending(path: "Sources")
     }
 
-    @Test func theGrantCheckNeverAsksCoreGraphics() throws {
+    @Test func theSilentPreflightHasOneOwner() throws {
         let (offenders, scanned) = try SourceScan.offenders(
             of: "CGPreflightScreenCaptureAccess", under: sources)
 
@@ -144,8 +147,29 @@ struct ScreenRecordingProbeTests {
         // 100 means a subtree went unread. `SourceScan` throws on a traversal error, which is the
         // other half — this used to skip an unreadable directory in silence.
         #expect(scanned > 100, "scanned only \(scanned) files — the source walk is broken")
-        #expect(
-            offenders.isEmpty,
-            "CGPreflightScreenCaptureAccess does not match the API the capture uses, so it must not decide the grant: \(offenders.joined(separator: ", "))")
+        #expect(offenders == ["Permissions.swift"], "all permission surfaces must share the same silent preflight")
+    }
+
+    @Test func anUngrantedStatusCheckNeverTouchesScreenCaptureKit() async {
+        let captures = ScreenRecordingAccessTests.Counter()
+        for _ in 0..<5 {
+            let found = await Permission.screenRecordingProbe(preflight: { false }, capture: { captures.bump() })
+            #expect(found == .declined)
+        }
+        #expect(captures.asks == 0)
+    }
+
+    @Test func aPositivePreflightIsStillVerifiedByTheCaptureAPI() async {
+        let captures = ScreenRecordingAccessTests.Counter()
+        let found = await Permission.screenRecordingProbe(preflight: { true }, capture: { captures.bump() })
+        #expect(found == .granted)
+        #expect(captures.asks == 1)
+    }
+
+    @Test func aCaptureFailureAfterPreflightDoesNotBecomeARefusal() async {
+        let found = await Permission.screenRecordingProbe(preflight: { true }, capture: {
+            throw NSError(domain: "CaptureFixture", code: 1)
+        })
+        #expect(found == .couldNotTell)
     }
 }

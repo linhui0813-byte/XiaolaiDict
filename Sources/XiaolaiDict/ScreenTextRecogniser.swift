@@ -80,9 +80,8 @@ final class ScreenTextRecogniser: Sendable {
     /// Accessibility path cannot vet an app that exposes no element, and that is exactly the case
     /// this path serves — so the exclusion has to be enforced here too, not only afterwards.
     /// Whether XiaolaiDict may capture at all. Injectable so the refusal can be tested; `.system`
-    /// asks through `Permission.screenRecording`, which probes with `SCShareableContent` — the API
-    /// this file captures through. **Not CoreGraphics**, which is what this said and what the rule
-    /// in `AGENTS.md` exists to prevent.
+    /// asks through `Permission.screenRecording`: a silent preflight blocks ungranted processes,
+    /// then ScreenCaptureKit verifies access through the API this file captures with.
     let access: ScreenRecordingAccess
 
     init(access: ScreenRecordingAccess = .system) {

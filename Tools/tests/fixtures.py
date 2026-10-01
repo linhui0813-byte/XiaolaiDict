@@ -70,7 +70,7 @@ def outputs(resources: Path) -> dict[str, bytes]:
         path = resources / name
         if path.is_dir():
             found.update({str(f.relative_to(resources)): f.read_bytes()
-                          for f in path.rglob("*") if f.is_file()})
+                          for f in path.rglob("*") if f.is_file() and f.name != ".DS_Store"})
         elif path.exists():
             found[name] = path.read_bytes()
     return found

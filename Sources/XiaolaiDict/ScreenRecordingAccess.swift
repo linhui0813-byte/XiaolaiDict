@@ -1,38 +1,28 @@
 import Synchronization
 import XiaolaiDictUI
 
-/// Whether XiaolaiDict may record the screen, and asking for it if not.
-///
-/// XiaolaiDict asks for Accessibility with a prompt and simply assumed Screen Recording. ScreenCaptureKit
-/// does not prompt on its own — it fails with "the user declined TCCs for application, window,
-/// display capture" — so a reader who has never granted it gets nothing from the recogniser and is
-/// never told why. The refusal that exposed this came from TCC denying a process launched over
-/// SSH rather than from a missing grant, but the gap it revealed is real: nothing in XiaolaiDict ever
-/// asked for this permission, and the error the reader saw named neither the permission nor where
-/// to grant it.
-///
-/// **The question is `Permission.screenRecording`'s, not one of this type's own.** It used to ask
-/// `CGPreflightScreenCaptureAccess()` while the Settings pane asked `SCShareableContent` — two APIs
-/// answering one question, which is how a surface comes to draw a tick while this gate still
-/// refuses. Delegating means they cannot diverge, rather than being expected not to.
-///
-/// The two calls are closures so the decision can be tested without the system's answer; nothing
-/// else about this is testable, and the decision is the part that was wrong.
+/// One capture permission owner: silent status checks, at most one automatic request per process.
+/// A declined lookup names System Settings rather than reopening a dialog on every hover.
 struct ScreenRecordingAccess: Sendable {
     var probe: @Sendable () async -> PermissionProbe
     var request: @Sendable () -> Bool
+    private let requests = ScreenRecordingRequestGate()
+
+    init(probe: @escaping @Sendable () async -> PermissionProbe,
+         request: @escaping @Sendable () -> Bool) {
+        self.probe = probe
+        self.request = request
+    }
 
     static let system = ScreenRecordingAccess(
         probe: { await granted.value { await Permission.screenRecording.probe } },
         request: { Permission.screenRecording.request() })
 
-    /// Whether XiaolaiDict may capture, asking once if the reader has actually declined.
+    /// Whether HuiDict may capture, with at most one automatic request in this process.
+    /// A stale signing identity can make macOS prompt despite a visible Settings grant, so the
+    /// application limits requests itself and directs subsequent refused lookups to Settings.
     ///
-    /// macOS shows the prompt only from a GUI session and only while the status is undetermined.
-    /// After a refusal there is no second prompt, which is why a refusal has to be reported to the
-    /// reader with somewhere to go rather than retried.
-    ///
-    /// **`couldNotTell` never asks**, and that is the whole of the fix here. It used to: the probe
+    /// **`couldNotTell` never asks**. It used to: the probe
     /// was a Bool, so a first `SCShareableContent` call that failed in a cold process was
     /// indistinguishable from a refusal, and `ensure()` raised a system dialog on a Mac that had
     /// granted the permission three days earlier. Measured 2026-09-25 — the dialog appeared and
@@ -51,12 +41,26 @@ struct ScreenRecordingAccess: Sendable {
         // for. The probe itself is cheap and harmless to finish; only the prompt is.
         case .declined:
             guard !Task.isCancelled else { return .declined }
-            return request() ? .granted : .declined
+            return requests.once(request) ? .granted : .declined
         case .couldNotTell: return .couldNotTell
         }
     }
 
     private static let granted = GrantMemo()
+}
+
+/// Copies of the capture gate share this state; concurrent or repeated lookups cannot re-prompt.
+private final class ScreenRecordingRequestGate: Sendable {
+    private let asked = Mutex(false)
+
+    func once(_ request: @Sendable () -> Bool) -> Bool {
+        let first = asked.withLock { value in
+            guard !value else { return false }
+            value = true
+            return true
+        }
+        return first && request()
+    }
 }
 
 /// Remembers a grant, never a refusal.
