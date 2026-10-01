@@ -88,6 +88,17 @@ enum SystemDictionary {
 /// against `d:pos` without a mapping table; localising *that* would make a stored value depend on
 /// the machine's language, which is the kind of thing that only ever breaks for someone else.
 enum PartOfSpeechLabel {
+    /// Familiar dictionary abbreviations keep each quick meaning on a short line.
+    static func compact(_ stored: String?) -> String? {
+        switch stored {
+        case "noun": "n."
+        case "verb": "v."
+        case "adjective": "adj."
+        case "adverb": "adv."
+        default: stored
+        }
+    }
+
     static func reader(_ stored: String?) -> String? {
         switch stored {
         case "noun": return String(localized: "noun")

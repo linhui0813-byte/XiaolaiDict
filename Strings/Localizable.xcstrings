@@ -1,6 +1,106 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Close lookup": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭取词"
+          }
+        }
+      }
+    },
+    "Entry: %@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "词条：%1$@"
+          }
+        }
+      }
+    },
+    "Partial result": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结果可能不完整"
+          }
+        }
+      }
+    },
+    "More meanings": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更多释义"
+          }
+        }
+      }
+    },
+    "Show all meanings, examples, and context": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看全部释义、例句和上下文"
+          }
+        }
+      }
+    },
+    "Meaning in context is uncertain": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前语境下的释义尚不确定"
+          }
+        }
+      }
+    },
+    "Open details to read this dictionary entry": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展开详情以阅读词条"
+          }
+        }
+      }
+    },
+    "Examples and details": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例句与详细释义"
+          }
+        }
+      }
+    },
+    "Full dictionary entry": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完整词典条目"
+          }
+        }
+      }
+    },
+    "Fewer details": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "收起详情"
+          }
+        }
+      }
+    },
     " (a guess — not confirmed)" : {
       "comment" : "Appended to copied text where the sense was not confirmed"
     },

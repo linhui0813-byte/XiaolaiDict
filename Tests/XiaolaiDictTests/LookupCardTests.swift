@@ -150,14 +150,25 @@ struct PanelHeightTests {
     /// `fittingSize` is AppKit asking the hosted SwiftUI view what it wants — the number the window
     /// then takes, since the scene is `.windowResizability(.contentSize)`.
     private func height(sentence: String) -> CGFloat {
+        // A short entry leaves room for context to affect the height. The expanded panel now
+        // opens every meaning, so the multi-sense sample reaches the cap even with a short sentence.
+        let sense = DictionarySense(
+            path: SensePath(block: 1, ordinal: 1), key: "fine.1", keyKind: .publisher,
+            definition: "of very high quality", text: "of very high quality")
+        let entry = DictionaryEntry(
+            dictionary: DictionaryIdentity(name: "New Oxford American Dictionary"),
+            headword: "fine", lookedUp: "fine", html: "<html/>",
+            document: EntryDocument(isStyled: true, entryID: "fine", homograph: nil,
+                blocks: [SenseBlock(number: 1, partOfSpeech: "adjective", senses: [sense])]))
         var presentation = LookupPresentation(
             request: 1, term: "fine", lemma: Lemma(text: "fine", basis: .tagger), source: nil,
             capture: .accessibility(.accessibilityTextRange, context: .complete), outcome: nil)
         presentation.sentence = sentence
         presentation.outcome = .entries(
-            NonEmpty([sampleEntry("New Oxford American Dictionary")])!, unreadable: [])
+            NonEmpty([entry])!, unreadable: [])
         let view = NSHostingView(
-            rootView: LookupPanelContent(presentation: presentation).environment(\.scale, scale))
+            rootView: LookupPanelContent(presentation: presentation, detailsInitiallyExpanded: true)
+                .environment(\.scale, scale))
         view.layoutSubtreeIfNeeded()
         return view.fittingSize.height
     }
