@@ -169,3 +169,28 @@ The synthetic image was opened in Preview for a capture test. Preview subsequent
 Text through Accessibility, so the image alone cannot establish that HuiDict used OCR. The initial
 selection shortcut reported no selection, and the subsequent Option-only attempt produced no
 lookup card. A successful OCR hover lookup has not been verified in this recovery check.
+
+### Reusing the existing Qwen model
+
+On 2026-10-01, Hui requested importing the previously downloaded Qwen3.5 4B model into HuiDict.
+The original XiaolaiDict model matched the current pinned catalog:
+`mlx-community/Qwen3.5-4B-4bit@ab9c7a42fd31095a40634b3362317779dee9e7fa`.
+All 11 required files passed size and SHA-256 verification before import.
+
+Independent APFS copies of those files were created under
+`~/Library/Application Support/HuiDict/Models/`, verified again, and marked complete only after
+every file passed. The original model remains under XiaolaiDict's model folder. No download,
+app rebuild, or permission change was required. Moving only the newly imported model directory
+to Finder Trash reverses the import without affecting the original.
+
+The installed app's `--model-status` changed from `installed: null` to `installed: standard`.
+Its `--sense-report` then loaded the exact imported revision through the bundled model service.
+Both Qwen and the shipped selector ladder chose the correct sense in all six built-in labelled
+cases; Qwen's measured answer times were 464–538 ms after prewarming. This verifies loading and
+sense selection for that small test set, rather than general accuracy or the earlier `approach`
+screenshot. The report does not download models. No live lookup card or Settings window was
+inspected during this import.
+
+The installed app remained build `2026.1001.72326`; its executable SHA-256 stayed
+`4d1c01c19455d89d29c8713443c1f4291995b8201d60ca0206ac1b88d90a76c9`.
+Deep, strict code-signature verification passed after import.
