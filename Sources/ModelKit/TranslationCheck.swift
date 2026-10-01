@@ -8,6 +8,17 @@ import Foundation
 /// render it with full confidence. Measured for both engines here: Qwen3.5-9B once returned its
 /// English untranslated, and Apple's framework fed a pair in the wrong language can only echo.
 public enum TranslationCheck {
+    /// Word answers must label each reading, and labels cannot hide an untranslated echo.
+    public static func isTranslation(_ output: String, for question: TranslationQuestion) -> Bool {
+        guard question.wordContext != nil else {
+            return isTranslation(output, of: question.sentence, into: question.target)
+        }
+        guard let gloss = WordTranslationGloss(output) else { return false }
+        return gloss.meanings.allSatisfy {
+            isTranslation($0.translation, of: question.sentence, into: question.target)
+        }
+    }
+
     /// `into` is the language asked for, where the caller knows it. An answer still in the *source's*
     /// language is refused even when it is not word-for-word the input: a model that restates the
     /// sentence, or hands back an English paraphrase of English, has not translated it. The target is

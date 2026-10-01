@@ -83,7 +83,7 @@ public struct SentenceTranslator: Sendable {
         // translation that arrived afterwards, and is not waited on for a second engine either.
         guard !Task.isCancelled else { return .unavailable }
         if case .translation(let text)? = answer,
-           TranslationCheck.isTranslation(text, of: question.sentence, into: question.target) {
+           TranslationCheck.isTranslation(text, for: question) {
             return .translated(text, by: .localModel)
         }
         // Apple's translator cannot use the surrounding sentence to translate only a selected word.

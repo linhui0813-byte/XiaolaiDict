@@ -95,7 +95,7 @@ struct ModelPromptTests {
         #expect(fields["surroundingSentence"] == question.wordContext)
         #expect(ModelPrompt.translationInstructions(for: question).contains("Translate only the selected text"))
         #expect(ModelPrompt.translationInstructions(for: question).contains("active or passive"))
-        #expect(ModelPrompt.translationTokens(for: question) == 128)
+        #expect(ModelPrompt.translationTokens(for: question) == 256)
         let huge = TranslationQuestion(sentence: String(repeating: "a", count: 1_000), target: "zh-Hans",
                                        wordContext: String(repeating: "b", count: 10_000))
         let bounded = try #require(JSONSerialization.jsonObject(with: Data(ModelPrompt.translation(huge).utf8)) as? [String: String])

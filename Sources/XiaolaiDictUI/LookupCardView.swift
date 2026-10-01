@@ -637,7 +637,7 @@ public struct LookupPanelContent: View {
     private func compactCard(_ card: LookupCard) -> some View {
         CompactLookupCardView(
             card: card, incomplete: compactIsIncomplete,
-            wordTranslation: wordTranslation?.text(for: wordTranslationQuestion),
+            wordTranslation: wordTranslation?.gloss(for: wordTranslationQuestion),
             hasWordContext: card.sentence?.isEmpty == false) {
             showingDetails = true
         }

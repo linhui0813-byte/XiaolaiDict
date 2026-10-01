@@ -32,10 +32,10 @@ struct WordLookupTranslationTests {
 
     @Test func aTranslationCannotAppearUnderAnotherWordOrSentence() throws {
         let original = try #require(TranslationQuestion.word(card(), target: "zh-Hans"))
-        let translated = try #require(WordLookupTranslation(.translated("被拒绝", by: .localModel), question: original))
-        #expect(translated.text(for: original) == "被拒绝")
-        #expect(translated.text(for: TranslationQuestion.word(card(sentence: "They refused to sign."), target: "zh-Hans")) == nil)
-        #expect(translated.text(for: TranslationQuestion.word(card(term: "accepted", base: "accept"), target: "zh-Hans")) == nil)
+        let translated = try #require(WordLookupTranslation(.translated("v. 被拒绝", by: .localModel), question: original))
+        #expect(translated.gloss(for: original)?.text == "v. 被拒绝")
+        #expect(translated.gloss(for: TranslationQuestion.word(card(sentence: "They refused to sign."), target: "zh-Hans")) == nil)
+        #expect(translated.gloss(for: TranslationQuestion.word(card(term: "accepted", base: "accept"), target: "zh-Hans")) == nil)
     }
 
     @Test func anUnavailableOrUnboundedAnswerKeepsTheDictionaryPreview() throws {
@@ -43,6 +43,15 @@ struct WordLookupTranslationTests {
         #expect(WordLookupTranslation(.unavailable, question: question) == nil)
         #expect(WordLookupTranslation(.translated("被拒绝", by: .appleTranslation), question: question) == nil)
         #expect(WordLookupTranslation(.translated(String(repeating: "字", count: 81), by: .localModel), question: question) == nil)
+        #expect(WordLookupTranslation(.translated("重新打开；被重新打开", by: .localModel), question: question) == nil)
+    }
+
+    @Test func generatedLabelsAreIndependentOfTheDictionaryVerbEntry() throws {
+        let question = try #require(TranslationQuestion.word(card(sentence: nil), target: "zh-Hans"))
+        let translated = try #require(WordLookupTranslation(
+            .translated("v. 拒绝了\nadj. 被拒绝的", by: .localModel), question: question))
+        #expect(translated.gloss.meanings.map(\.partOfSpeech) == [.verb, .adjective])
+        #expect(translated.gloss.meanings.map(\.translation) == ["拒绝了", "被拒绝的"])
     }
 
     @Test func theCardExplainsRegularFormsWithoutInventingAnAdjectiveSense() {
@@ -58,16 +67,17 @@ struct WordLookupTranslationTests {
 @MainActor
 struct WordLookupTranslationLayoutTests {
     @Test func theGeneratedGlossAndWordFormFitTheCompactCardAtEachTextSize() throws {
-        let sense = SensePresentation(key: "refuse-verb", ordinal: 1, partOfSpeech: "verb",
-                                      label: "拒绝；拒绝给予；回绝", keyKind: .publisher,
+        let sense = SensePresentation(key: "reopen-verb", ordinal: 1, partOfSpeech: "verb",
+                                      label: "重新打开；再次开始；重新启用", keyKind: .publisher,
                                       standing: .unclaimed, metBefore: false)
-        let card = LookupCard(term: "refused", lemma: "refuse", heading: "refuse", partOfSpeech: "verb",
-                              pronunciation: "/rɪˈfjuːz/", answer: .undecided(reason: nil),
-                              sentence: "The application was refused.", alternatives: [sense])
+        let card = LookupCard(term: "reopened", lemma: "reopen", heading: "reopen", partOfSpeech: "verb",
+                              pronunciation: "/ˌriːˈəʊpən/", answer: .undecided(reason: nil),
+                              sentence: nil, alternatives: [sense])
+        let gloss = try #require(WordTranslationGloss("v. 重新打开了\nadj. 被重新打开的"))
         for textSize in [TextSize.standard, .large] {
             let scale = Scale(textSize)
             for scheme in [ColorScheme.light, .dark] {
-                let content = CompactLookupCardView(card: card, wordTranslation: "被拒绝", hasWordContext: true, onMore: {})
+                let content = CompactLookupCardView(card: card, wordTranslation: gloss, onMore: {})
                     .frame(width: scale.space.lookupWidth)
                     .background(scheme == .dark ? Color(white: 0.13) : .white)
                     .environment(\.scale, scale)

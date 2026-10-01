@@ -1,4 +1,5 @@
 import DictionaryModel
+import ModelKit
 import SwiftUI
 import XiaolaiDictCore
 
@@ -61,7 +62,7 @@ struct CompactLookupCardView: View {
     @Environment(\.closeLookup) private var close
     let card: LookupCard
     var incomplete = false
-    var wordTranslation: String? = nil
+    var wordTranslation: WordTranslationGloss? = nil
     var hasWordContext = false
     let onMore: () -> Void
 
@@ -113,9 +114,16 @@ struct CompactLookupCardView: View {
 
             if let wordTranslation {
                 VStack(alignment: .leading, spacing: scale.space.line) {
-                    Text(verbatim: wordTranslation)
-                        .font(.system(size: scale.text.body, weight: .medium))
+                    ForEach(wordTranslation.meanings, id: \.partOfSpeech) { meaning in
+                        HStack(alignment: .firstTextBaseline, spacing: scale.space.inline) {
+                            Text(verbatim: meaning.partOfSpeech.label)
+                                .foregroundStyle(.secondary)
+                            Text(verbatim: meaning.translation)
+                                .fontWeight(.medium)
+                        }
+                        .font(.system(size: scale.text.body))
                         .fixedSize(horizontal: false, vertical: true)
+                    }
                     Group {
                         if hasWordContext { Text("In context · Qwen") }
                         else { Text("Word translation · Qwen") }

@@ -37,7 +37,7 @@ public enum ModelPrompt {
     /// context, after which the pane falls to a weaker engine for a reason nothing records.
     public static let sentenceCharacterLimit = 1_000
     public static let selectedTextCharacterLimit = 120
-    /// The prompt requests 40 characters; this hard limit rejects answers that outgrow a quick gloss.
+    /// Includes grammar labels and line breaks; rejects answers that outgrow a quick gloss.
     public static let maximumWordTranslationCharacters = 80
 
     /// Untrusted text, cut to `limit` and flattened onto one line.
@@ -85,10 +85,19 @@ public enum ModelPrompt {
         if question.wordContext != nil {
             let examples = question.target.lowercased().hasPrefix("zh") ? """
 
-            Examples for Chinese: "accepted" with no sentence → "接受了；被接受的"; \
-            "accepted" in "The offer was accepted." → "被接受"; \
-            "accepted" in "They accepted the offer." → "接受了"; \
-            "design" in "Sometimes a design that uses more components is simpler." → "设计方案".
+            Examples for Chinese:
+            "reopened" without a sentence has readings \
+            {"partOfSpeech":"verb","translation":"重新打开了"} and \
+            {"partOfSpeech":"adjective","translation":"被重新打开的"}.
+            "refused" without a sentence has readings \
+            {"partOfSpeech":"verb","translation":"拒绝了"} and \
+            {"partOfSpeech":"adjective","translation":"被拒绝的"}.
+            "accepted" in "The offer was accepted." is \
+            {"partOfSpeech":"verb","translation":"被接受"}.
+            "reopened" in "The newly reopened shop is busy." is \
+            {"partOfSpeech":"adjective","translation":"重新开业的"}.
+            "design" in "Sometimes a design that uses more components is simpler." is \
+            {"partOfSpeech":"noun","translation":"设计方案"}.
             """ : ""
             return """
             You translate a selected word or short phrase for a language learner.
@@ -99,10 +108,15 @@ public enum ModelPrompt {
             First determine its part of speech from the sentence: keep a noun or adjective reading \
             rather than substituting a related verb. \
             Prefer the sentence over a dictionary hint that does not fit it.
-            If there is no surrounding sentence, give at most three common readings separated by semicolons. \
-            Preserve inflected forms: if the word can be both a past tense and a past participle, \
-            include both its active and passive readings rather than several synonyms of its base form.
-            Output only a short translation, at most 40 characters. No labels, explanations, examples, \
+            With a surrounding sentence, return only its one contextual reading. \
+            Determine the English word's part of speech, not the Chinese translation's grammar. \
+            A passive verb is verb; a past participle describing a noun is adjective.
+            Without a surrounding sentence, give at most three common readings grouped by part of speech. \
+            For an inflected verb that also has an adjectival reading, include both verb and adjective. \
+            Do not replace its adjective reading with more synonyms of the verb. \
+            Combine synonyms with semicolons in one translation; do not repeat a part of speech.
+            Fill the response schema. Keep all translations together under 40 characters. \
+            Translation fields contain only the translated words, without labels, explanations, examples, \
             quotation marks, or translation of the whole surrounding sentence.
             """ + examples
         }
@@ -148,7 +162,7 @@ public enum ModelPrompt {
     /// tokens than the source — never the backend's default of thousands, which a model that stopped
     /// making sense could spend in full on one sentence.
     public static func translationTokens(for question: TranslationQuestion) -> Int {
-        if question.wordContext != nil { return 128 }
+        if question.wordContext != nil { return 256 }
         return min(maximumTranslationTokens, minimumTranslationTokens + question.sentence.utf16.count * 2)
     }
 

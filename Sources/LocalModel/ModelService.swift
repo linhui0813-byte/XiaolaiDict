@@ -221,17 +221,32 @@ public actor ModelService {
         return await withModel { model in
             let session = LanguageModelSession(
                 model: model, instructions: ModelPrompt.translationInstructions(for: question))
-            let text = try await session.respond(
-                to: ModelPrompt.translation(question),
-                // A quick word gloss chooses a grammatical reading; random variation adds no value.
-                options: GenerationOptions(temperature: question.wordContext == nil ? nil : 0,
-                                           maximumResponseTokens: ModelPrompt.translationTokens(for: question)))
-                .content.trimmingCharacters(in: .whitespacesAndNewlines)
+            let text: String
+            let prompt = ModelPrompt.translation(question)
+            let options = GenerationOptions(temperature: question.wordContext == nil ? nil : 0,
+                                            maximumResponseTokens: ModelPrompt.translationTokens(for: question))
+            if let context = question.wordContext {
+                if context.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let answer = try await session.respond(to: prompt, generating: GeneratedWordReadings.self, options: options)
+                    guard answer.content.readings.allSatisfy({
+                        TranslationCheck.isTranslation($0.translation, of: question.sentence, into: question.target)
+                    }) else {
+                        return .failure(.generationFailed("a generated word reading was not translated"))
+                    }
+                    text = answer.content.labelledText
+                } else {
+                    let answer = try await session.respond(to: prompt, generating: GeneratedWordMeaning.self, options: options)
+                    text = answer.content.labelledText
+                }
+            } else {
+                text = try await session.respond(to: prompt, options: options)
+                    .content.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
             // An echo reads as success and is not one: 9B once handed its English back untranslated.
             // **Told the target too**, so an answer still in the source's language is caught here
             // rather than only at the pane — the report and the end-to-end gate read this reply.
-            guard TranslationCheck.isTranslation(text, of: question.sentence, into: question.target) else {
-                return .failure(.generationFailed("the model answered with the sentence it was given"))
+            guard TranslationCheck.isTranslation(text, for: question) else {
+                return .failure(.generationFailed("the model returned an untranslated or invalidly labelled translation"))
             }
             return .translation(text)
         }

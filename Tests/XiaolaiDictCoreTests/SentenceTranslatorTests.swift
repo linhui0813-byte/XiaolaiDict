@@ -13,8 +13,12 @@ struct SentenceTranslatorTests {
             .translate(question)
         #expect(outcome == .unavailable)
         #expect(appleAsked.withLock { $0 } == 0)
-        let translated = await Self.translator(local: .translation("被拒绝"), apple: .failed).translate(question)
-        #expect(translated == .translated("被拒绝", by: .localModel))
+        let translated = await Self.translator(local: .translation("v. 被拒绝"), apple: .failed).translate(question)
+        #expect(translated == .translated("v. 被拒绝", by: .localModel))
+        let unlabelled = await Self.translator(local: .translation("被拒绝"), apple: .translated("拒绝"), appleAsked: appleAsked)
+            .translate(question)
+        #expect(unlabelled == .unavailable)
+        #expect(appleAsked.withLock { $0 } == 0)
     }
     /// **An echo of a quoted sentence is still an echo.** The reader's captured sentence can carry
     /// its own quotation marks — dialogue in a novel is the ordinary case — and unwrapping only the

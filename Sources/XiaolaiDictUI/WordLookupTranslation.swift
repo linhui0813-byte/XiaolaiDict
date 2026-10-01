@@ -5,18 +5,18 @@ import XiaolaiDictCore
 /// Generated translations stay separate from publisher senses and never acquire dictionary keys.
 struct WordLookupTranslation: Equatable {
     let question: TranslationQuestion
-    let text: String
+    let gloss: WordTranslationGloss
 
     init?(_ outcome: TranslationOutcome, question: TranslationQuestion) {
         guard case .translated(let text, by: .localModel) = outcome,
-              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              text.count <= ModelPrompt.maximumWordTranslationCharacters else { return nil }
+              TranslationCheck.isTranslation(text, for: question),
+              let gloss = WordTranslationGloss(text) else { return nil }
         self.question = question
-        self.text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.gloss = gloss
     }
 
-    func text(for current: TranslationQuestion?) -> String? {
-        question == current ? text : nil
+    func gloss(for current: TranslationQuestion?) -> WordTranslationGloss? {
+        question == current ? gloss : nil
     }
 }
 

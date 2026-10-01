@@ -682,10 +682,37 @@ struct ModelServiceTests {
     }
 
     @Test func aWordGlossChoosesItsReadingWithoutSampling() async throws {
-        let model = ScriptedModel(.answer("被拒绝"))
-        _ = try await service(model).reply(to: .translate(
+        let model = ScriptedModel(.answer(#"{"partOfSpeech":"verb","translation":"被拒绝"}"#))
+        let reply = try await service(model).reply(to: .translate(
             TranslationQuestion(sentence: "refused", target: "zh-Hans", wordContext: "The application was refused.")))
+        #expect(reply == .translation("v. 被拒绝"))
         #expect(model.temperatures == [0])
+    }
+
+    @Test(arguments: [#"{"partOfSpeech":"verb","translation":"refused"}"#,
+                      #"{"partOfSpeech":"verb","translation":"拒绝； adj. 被拒绝的"}"#,
+                      #"{"partOfSpeech":"unknown","translation":"被拒绝"}"#])
+    func invalidWordLabelsOrEchoesAreRejected(_ output: String) async throws {
+        let reply = try await service(ScriptedModel(.answer(output))).reply(to: .translate(
+            TranslationQuestion(sentence: "refused", target: "zh-Hans", wordContext: "They refused to sign.")))
+        guard case .failure(.generationFailed) = reply else {
+            Issue.record("An invalid word gloss was accepted: \(reply)")
+            return
+        }
+    }
+
+    @Test func isolatedWordsRetainTheirDistinctGeneratedReadings() async throws {
+        let model = ScriptedModel(.answer(#"{"readings":[{"partOfSpeech":"verb","translation":"重新打开了"},{"partOfSpeech":"adjective","translation":"被重新打开的"}]}"#))
+        let reply = try await service(model).reply(to: .translate(
+            TranslationQuestion(sentence: "reopened", target: "zh-Hans", wordContext: "")))
+        #expect(reply == .translation("v. 重新打开了\nadj. 被重新打开的"))
+    }
+
+    @Test func isolatedSynonymsShareOneRowWithoutLosingAnAdjectiveReading() async throws {
+        let model = ScriptedModel(.answer(#"{"readings":[{"partOfSpeech":"verb","translation":"重新打开"},{"partOfSpeech":"adjective","translation":"被重新打开的"},{"partOfSpeech":"verb","translation":"重新开业"}]}"#))
+        let reply = try await service(model).reply(to: .translate(
+            TranslationQuestion(sentence: "reopened", target: "zh-Hans", wordContext: "")))
+        #expect(reply == .translation("v. 重新打开；重新开业\nadj. 被重新打开的"))
     }
 
     /// Prose is not: at temperature 0 a small model repeats itself, so the translation and the
