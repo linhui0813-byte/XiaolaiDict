@@ -85,5 +85,15 @@ Verification of these safeguards:
   do not by themselves establish that HuiDict's saved grants survived the update. The acceptance
   rule also requires a normal app launch with permission decisions attributed to HuiDict itself.
 
-No privacy permission was reset or re-granted during this update. Native app verification remains
-the final check after reopening the installed build.
+Native verification completed on October 1 with normal launches of the installed build:
+
+- At 18:51:48, process `49212` was the responsible HuiDict process. TCC accepted its original
+  certificate-based requirement with status `0` and returned `Allowed (System Set)` for both
+  Accessibility and Screen Recording, with `DB Action:None`.
+- After a graceful restart, process `49974` received the same decisions at 18:52:29. Repeated
+  Screen Recording checks were allowed in both processes.
+- No privacy permission was reset or re-granted during this update or restart. This verifies
+  that the installed update retained HuiDict's own grants, independently of the terminal checks.
+
+HuiDict remains running. The global shortcut and Option-hover gestures were not manually repeated
+in this update verification; their interaction behavior is a separate check from grant persistence.
