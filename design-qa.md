@@ -161,6 +161,9 @@ result. This check calls ScreenCaptureKit's `SCShareableContent`, the API used b
 rather than relying only on the System Settings switch.
 The app was then stopped and reopened once more. Its new process reported the same two On states
 without another authorization dialog, establishing that the refreshed grants survived restart.
+Hui subsequently confirmed that the original Control + Option + D test opened a translation card.
+The floating card was not available to native automation for inspection, so this final shortcut
+result is user-confirmed; the post-restart permission states were inspected directly.
 
 The synthetic image was opened in Preview for a capture test. Preview subsequently exposed Live
 Text through Accessibility, so the image alone cannot establish that HuiDict used OCR. The initial
