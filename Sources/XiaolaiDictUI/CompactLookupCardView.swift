@@ -88,10 +88,6 @@ struct CompactLookupCardView: View {
             Divider()
 
             HStack(alignment: .firstTextBaseline, spacing: scale.space.line) {
-                if card.heading.localizedCaseInsensitiveCompare(card.term) != .orderedSame {
-                    Text("Entry: \(card.heading)")
-                        .font(.system(size: scale.text.small))
-                }
                 if let pronunciation = card.pronunciation {
                     Text(verbatim: pronunciation)
                         .font(.system(size: scale.text.body))
