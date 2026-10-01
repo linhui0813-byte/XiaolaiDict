@@ -39,6 +39,8 @@ enum LaunchMode: Equatable {
     /// `--sense-report`: every rung of the sense ladder scored on the labelled set, in the bundle.
     case senseReport
     case wordTranslationReport
+    /// Silent effective-permission checks for update verification; never requests access.
+    case permissionReport
 
     /// `--panel-report`: what the lookup panel's window actually is, and what an ordinary click on
     /// it costs the reader. The scene type, whether it can become key, and whether clicking a
@@ -69,6 +71,7 @@ enum LaunchArguments {
                XiaolaiDict --model-report
                XiaolaiDict --sense-report
                XiaolaiDict --word-translation-report
+               XiaolaiDict --permission-report
                XiaolaiDict --panel-report
         """
 
@@ -92,6 +95,7 @@ enum LaunchArguments {
         case "--model-report": alone(arguments, is: .modelReport)
         case "--sense-report": alone(arguments, is: .senseReport)
         case "--word-translation-report": alone(arguments, is: .wordTranslationReport)
+        case "--permission-report": alone(arguments, is: .permissionReport)
         case "--panel-report": alone(arguments, is: .panelReport)
         case let first? where first.hasPrefix("--"): fail("unknown command \(first)")
         default: .success(.app)

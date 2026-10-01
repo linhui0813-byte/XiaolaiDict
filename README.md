@@ -43,7 +43,9 @@ The output is `.build/HuiDict.app`, with identifier `com.linhui.huidict`. The se
 a persistent certificate in a dedicated local keychain so updates keep a compatible app identity.
 It changes neither system certificate trust nor the login-keychain search list and needs no paid
 Developer ID. Signing credentials stay outside the repository in HuiDict's Application Support folder.
-Without this setup, the build uses an ad-hoc signature whose identity changes on every rebuild.
+The build stops if this identity is missing; it cannot fall back to ad-hoc signing. Before publishing
+an update it checks that the certificate and designated requirement match the installed app and
+the previous build. If the Signing folder is lost, recover it instead of generating a new identity.
 Each service accepts only the exact signed host app; the app also verifies the bundled services.
 Unsigned or modified bundles are refused.
 The normal Developer ID release command remains available separately.
@@ -54,6 +56,24 @@ to the persistent signer requires replacing the old permission entries once. Lat
 the certificate. Keep the Signing folder when updating the app; replacing or losing that identity
 requires granting permissions again. This local build is not notarized for public distribution.
 Its history and model files live in `~/Library/Application Support/HuiDict`.
+
+Before replacing an installed app, run the same compatibility check explicitly:
+
+```sh
+python3 Tools/local-signing.py check-update .build/HuiDict.app
+```
+
+After installation, verify effective permission grants without requesting access:
+
+```sh
+~/Applications/HuiDict.app/Contents/MacOS/HuiDict --permission-report
+```
+
+This returns JSON and exit status zero only when both permissions are granted to the current
+process. It keeps unknown capture failures separate from denied access and never calls a
+permission-request API or opens an app window. A terminal can lend its permissions to a child
+process: validate saved HuiDict grants through a normal app launch and macOS TCC decisions
+attributed to HuiDict itself, rather than relying on a passing terminal report alone.
 
 The local build runs the Swift tests first. Tests requiring optional licensed sideloaded dictionaries
 are reported as skipped when those fixtures are not installed; the installed Apple dictionary tests run.

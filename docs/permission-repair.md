@@ -56,3 +56,34 @@ refreshing HuiDict's permission entries again.
 
 Apple documents compatible app identity and permission sharing in
 [TN3127](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements).
+
+## Prevention for subsequent updates
+
+The local build now requires the persistent signer. A missing identity stops the build instead
+of producing an ad-hoc replacement. `setup` refuses to generate a replacement identity when a
+certificate-signed HuiDict is already installed or present in the build directory; recover the
+original Signing folder if it is lost.
+
+Before publication, both a new build and a reused cached build must pass the compatibility check
+against the installed app. A new build must also match the previous published bundle. The gate
+requires strict signatures, the configured certificate, and an unchanged designated requirement.
+`python3 Tools/local-signing.py check-update .build/HuiDict.app` exposes this same gate before
+installation. `AGENTS.md` makes these checks part of the update workflow and excludes routine
+permission resets from normal updates.
+
+Verification of these safeguards:
+
+- All 2,040 reported Swift tests and 75 tool/reference tests passed.
+- A missing signer was rejected before publication.
+- A validly signed test app using the original certificate but a different bundle identifier was
+  rejected. A different certificate fingerprint was also rejected.
+- Build `2026.1001.101852` was installed reversibly over `2026.1001.94259` at the same path with the
+  original certificate and designated requirement. Its host SHA-256 is
+  `0f5ec4c9c2692db0d7ce9831e0f64965ccfdb865e13fc76f5f24a1e4f23c2ade`.
+- The new `--permission-report` diagnostic returned both effective grants in three fresh processes
+  and never requested access. TCC attributed those terminal-launched checks to Ghostty, so they
+  do not by themselves establish that HuiDict's saved grants survived the update. The acceptance
+  rule also requires a normal app launch with permission decisions attributed to HuiDict itself.
+
+No privacy permission was reset or re-granted during this update. Native app verification remains
+the final check after reopening the installed build.

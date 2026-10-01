@@ -13,6 +13,7 @@ import tempfile
 
 DEFAULT = Path.home() / "Library/Application Support/HuiDict/Signing"
 REPO = Path(__file__).resolve().parents[1]
+INSTALLED = Path.home() / "Applications/HuiDict.app"
 
 
 def run(arguments, secret=""):
@@ -42,6 +43,33 @@ def verify(bundle, expected):
             raise RuntimeError("The code is not signed by the configured local certificate")
 
 
+def designated_requirement(bundle):
+    described = run(["/usr/bin/codesign", "-d", "-r-", str(bundle)])
+    for line in described.splitlines():
+        if line.startswith("designated => "):
+            return line
+    raise RuntimeError("The app has no designated signing requirement")
+
+
+def check_update(bundle, expected, installed=INSTALLED):
+    """Reject identity drift before replacing an app with working permission grants."""
+    verify(bundle, expected)
+    if not installed.exists():
+        return  # First installation has no permission identity to preserve.
+    verify(installed, expected)
+    if designated_requirement(bundle) != designated_requirement(installed):
+        raise RuntimeError("Update changes HuiDict's designated requirement; the current app was preserved")
+
+
+def protect_existing_identity(apps):
+    for app in apps:
+        if app.exists():
+            described = run(["/usr/bin/codesign", "-d", "-vv", str(app)])
+            if "Signature=adhoc" not in described.splitlines():
+                raise RuntimeError("A certificate-signed HuiDict already exists; recover its original Signing folder "
+                                   "instead of generating a replacement identity")
+
+
 def unlock(directory):
     password = (directory / "password").read_text().splitlines()[0]
     run(["/usr/bin/security", "unlock-keychain", "-p", password,
@@ -52,6 +80,7 @@ def setup(directory):
     if directory == REPO or REPO in directory.parents:
         raise RuntimeError("Signing credentials must be stored outside the repository")
     if (directory / "identity.sha1").exists():
+        identity(directory)
         return
     if directory.exists() and any(directory.iterdir()):
         expected = ["password", "certificate.pem", "private-key.pem", "identity.p12",
@@ -61,6 +90,7 @@ def setup(directory):
             finalize(directory)
             return
         raise RuntimeError("Signing directory already contains files; no identity was replaced")
+    protect_existing_identity([INSTALLED, REPO / ".build/HuiDict.app"])
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     os.chmod(directory, 0o700)
     password = secrets.token_urlsafe(36)
@@ -139,10 +169,11 @@ def finalize(directory, openssl=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["setup", "unlock", "status", "verify"])
+    parser.add_argument("command", choices=["setup", "unlock", "status", "verify", "check-update"])
     parser.add_argument("bundle", nargs="?", type=Path)
     parser.add_argument("--directory", type=Path, default=DEFAULT)
     parser.add_argument("--identity")
+    parser.add_argument("--installed", type=Path, default=INSTALLED)
     args = parser.parse_args()
     directory = args.directory.expanduser().resolve()
     try:
@@ -150,6 +181,12 @@ def main():
             if not args.bundle or not args.identity:
                 raise RuntimeError("verify requires a bundle and --identity fingerprint")
             verify(args.bundle, args.identity)
+            return
+        if args.command == "check-update":
+            if not args.bundle:
+                raise RuntimeError("check-update requires a bundle")
+            check_update(args.bundle, args.identity or identity(directory), args.installed.expanduser().resolve())
+            print("Update preserves HuiDict's signing identity")
             return
         if args.command == "setup":
             setup(directory)

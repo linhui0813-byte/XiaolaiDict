@@ -35,7 +35,9 @@ case "$LOCAL_BUILD" in
            [[ "$XIAOLAIDICT_SIGN_ID" =~ ^[[:xdigit:]]{40}$ ]] \
                || { echo "error: invalid HuiDict local certificate fingerprint" >&2; exit 1; }
        else
-           XIAOLAIDICT_SIGN_ID=-
+           echo "error: HuiDict requires its persistent signing certificate; ad-hoc fallback is disabled." >&2
+           echo "Recover the original Signing folder for updates. On a first install, run python3 Tools/local-signing.py setup." >&2
+           exit 1
        fi
        export XIAOLAIDICT_SIGN_ID ;;
     *) echo "error: HUIDICT_LOCAL_BUILD must be 0 or 1" >&2; exit 1 ;;
@@ -511,13 +513,8 @@ verify_signatures() {
         local described
         described=$(codesign -dvvv "$part" 2>&1 || true)
         if [ "$LOCAL_BUILD" = 1 ]; then
-            if [ "$XIAOLAIDICT_SIGN_ID" = - ]; then
-                grep -q '^Signature=adhoc' <<<"$described" \
-                    || { echo "$part is not locally signed"; return 1; }
-            else
-                python3 Tools/local-signing.py verify "$part" --identity "$XIAOLAIDICT_SIGN_ID" \
-                    || { echo "$part is not signed by the persistent HuiDict certificate"; return 1; }
-            fi
+            python3 Tools/local-signing.py verify "$part" --identity "$XIAOLAIDICT_SIGN_ID" \
+                || { echo "$part is not signed by the persistent HuiDict certificate"; return 1; }
             grep -q 'flags=.*runtime' <<<"$described" \
                 || { echo "$part has no hardened runtime"; return 1; }
             continue
@@ -944,13 +941,26 @@ build() {
     if [ -d "$APP" ] && [ "$(cat "$BUNDLE_DIGEST" 2>/dev/null)" = "$digest" ]; then
         local problem
         if problem=$(verify_bundle "$APP" 2>&1); then
+            verify_local_update "$APP"
             note "$APP is up to date"
             return 0
         fi
         note "$APP matches its inputs but fails verification ($problem); rebuilding"
     fi
     assemble
+    verify_local_update "$STAGE"
     publish "$digest"
+}
+
+# Preserve macOS's permission identity before publication or reuse of a cached bundle.
+verify_local_update() {
+    [ "$LOCAL_BUILD" = 1 ] || return 0
+    python3 Tools/local-signing.py check-update "$1" --identity "$XIAOLAIDICT_SIGN_ID" \
+        || fail "update signing identity differs from the installed app; no bundle was published"
+    if [ "$1" != "$APP" ] && [ -d "$APP" ]; then
+        python3 Tools/local-signing.py check-update "$1" --identity "$XIAOLAIDICT_SIGN_ID" --installed "$APP" \
+            || fail "update signing identity differs from the previous build; no bundle was published"
+    fi
 }
 
 # ---------------------------------------------------------------------------------------------

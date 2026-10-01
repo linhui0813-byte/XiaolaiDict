@@ -44,6 +44,13 @@ case .success(.readPoint(let x, let y)):
     Task { @MainActor in exit(await LookupCommand.readPoint(x: x, y: y).rawValue) }
     pointReader.run()
 
+// Verify capture access under an AppKit runloop, without opening a window or requesting access.
+case .success(.permissionReport):
+    let permissionReader = NSApplication.shared
+    permissionReader.setActivationPolicy(.accessory)
+    Task { @MainActor in exit(await PermissionReport.run().rawValue) }
+    permissionReader.run()
+
 // Spike S1's instrument. It must run inside the signed bundle: a bare CLI binary reported voices
 // that could not be resolved and a voice that synthesised zero frames.
 case .success(.speechReport):
