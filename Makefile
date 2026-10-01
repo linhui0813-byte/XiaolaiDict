@@ -25,7 +25,7 @@
 # Stated, not inferred from position: make's default is "the first target", which is a property
 # of where a line was pasted rather than of intent.
 .DEFAULT_GOAL := all
-.PHONY: all run test test-swift test-tools icon strings e2e e2e-status release clean metal-guard
+.PHONY: all run test test-swift test-tools icon strings e2e e2e-status release clean metal-guard local local-test
 
 # Machine-local settings, untracked: the name of your end-to-end machine and anything else that
 # belongs to one developer's network rather than to this project. Read BEFORE the defaults below,
@@ -67,6 +67,15 @@ all: test-swift
 
 run: test-swift
 	@Tools/build-bundle.sh run
+
+# Independent local app, with strict code-hash peer requirements instead of a paid signing team.
+local: local-test
+	@HUIDICT_LOCAL_BUILD=1 Tools/build-bundle.sh build
+
+local-test:
+	@Tools/metal-cache-guard.sh .build/huidict-swift
+	swift test --scratch-path .build/huidict-swift -Xswiftc -DHUIDICT_LOCAL_BUILD; status=$$?; \
+	Tools/clean-test-defaults.sh || status=1; Tools/clean-test-scratch.sh || status=1; exit $$status
 
 test: test-swift test-tools
 

@@ -24,6 +24,7 @@ let package = Package(
         // explaining in terms of dictionaries, models or readers belongs somewhere else. Foundation,
         // Dispatch and Synchronization, and nothing further.
         .target(name: "XiaolaiDictBase"),
+        .target(name: "XiaolaiDictPeer", dependencies: ["XiaolaiDictBase"]),
 
         // The dictionary itself: entries, senses, entry documents, lemmas, and the dictionary
         // service's wire protocol. Foundation and NaturalLanguage — plus CryptoKit, because a sense
@@ -54,7 +55,7 @@ let package = Package(
         // the store the weights are downloaded into. Linked by the model service and by the app;
         // **never by the dictionary service**, which is the point of it being here and not in the
         // core. No MLX — that is the executable's alone.
-        .target(name: "ModelKit"),
+        .target(name: "ModelKit", dependencies: ["XiaolaiDictBase"]),
 
         // The reader's side: the lookup ledger, the sense ladder, reading history, hover policy,
         // screen geometry. No AppKit and no private API — the part that has to be exhaustively
@@ -71,7 +72,7 @@ let package = Package(
 
         .executableTarget(
             name: "XiaolaiDictService",
-            dependencies: ["XiaolaiDictBase", "DictionaryModel", "DictionaryBridge", "PhraseLookup"]),
+            dependencies: ["XiaolaiDictBase", "XiaolaiDictPeer", "DictionaryModel", "DictionaryBridge", "PhraseLookup"]),
 
         // What the model service does with a request — the prompts, the session, what a refusal
         // becomes — written against any `LanguageModel`, so its tests run on an injected executor
@@ -84,7 +85,7 @@ let package = Package(
         .executableTarget(
             name: "XiaolaiDictModelService",
             dependencies: [
-                "XiaolaiDictBase", "ModelKit", "LocalModel",
+                "XiaolaiDictBase", "XiaolaiDictPeer", "ModelKit", "LocalModel",
                 .product(name: "MLX", package: "mlx-swift"),
                 .product(name: "MLXFoundationModels", package: "mlx-swift-lm"),
                 .product(name: "MLXLLM", package: "mlx-swift-lm"),
@@ -97,7 +98,7 @@ let package = Package(
         // requires a new build layout… or break out your preview code into a separate framework."
         // Nothing here knows about windows, XPC or the ledger.
         .target(name: "XiaolaiDictUI", dependencies: ["XiaolaiDictBase", "DictionaryModel", "ModelKit", "XiaolaiDictCore"]),
-        .executableTarget(name: "XiaolaiDict", dependencies: ["XiaolaiDictBase", "DictionaryModel", "ModelKit", "XiaolaiDictCore", "XiaolaiDictUI"]),
+        .executableTarget(name: "XiaolaiDict", dependencies: ["XiaolaiDictBase", "XiaolaiDictPeer", "DictionaryModel", "ModelKit", "XiaolaiDictCore", "XiaolaiDictUI"]),
 
         // The index builder, as a command. The module it drives has no other entry point: everything in
         // `AppleDictionaryFormat` was reachable only from its own tests until this existed, which is a
@@ -113,6 +114,7 @@ let package = Package(
         // What the test targets share, and nothing ships: a defaults suite a test can make and
         // forget, because it is removed — file and all — when the test process ends.
         .target(name: "XiaolaiDictTestSupport", path: "Tests/Support"),
+        .testTarget(name: "XiaolaiDictPeerTests", dependencies: ["XiaolaiDictPeer", "XiaolaiDictBase", "XiaolaiDictTestSupport"]),
         // Gated on XIAOLAIDICT_BUNDLES: the measurements run against real installed
         // dictionaries, whose text is licensed and never vendored into the repository.
         .testTarget(name: "AppleDictionaryFormatTests",

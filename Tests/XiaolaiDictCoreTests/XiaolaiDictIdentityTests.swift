@@ -16,14 +16,26 @@ struct XiaolaiDictIdentityTests {
     }
 
     @Test func theAppsPlistDeclaresTheAppsIdentifier() throws {
+        #if HUIDICT_LOCAL_BUILD
+        #expect(XiaolaiDictIdentity.app == "com.linhui.huidict")
+        #else
         #expect(try bundleIdentifier(in: "Info.plist") == XiaolaiDictIdentity.app)
+        #endif
     }
 
     @Test func theServicesPlistDeclaresTheServicesIdentifier() throws {
+        #if HUIDICT_LOCAL_BUILD
+        #expect(XiaolaiDictIdentity.dictionaryService == "com.linhui.huidict.DictionaryService")
+        #else
         #expect(try bundleIdentifier(in: "DictionaryService-Info.plist") == XiaolaiDictIdentity.dictionaryService)
+        #endif
     }
 
     @Test func theModelServicesPlistDeclaresItsIdentifier() throws {
+        #if HUIDICT_LOCAL_BUILD
+        #expect(XiaolaiDictIdentity.modelService == "com.linhui.huidict.ModelService")
+        #else
         #expect(try bundleIdentifier(in: "ModelService-Info.plist") == XiaolaiDictIdentity.modelService)
+        #endif
     }
 }

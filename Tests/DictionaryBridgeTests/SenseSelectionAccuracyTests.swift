@@ -247,7 +247,11 @@ struct SenseSelectionAccuracyTests {
         #expect(await selector.choose(from: fine, reading: nil, context: .missing).abstention == .noContext)
         #expect(await selector.choose(
             from: fine, reading: "He was ordered to pay a heavy", context: .mayBeCut).abstention == .noContext)
+    }
 
+    @Test(.enabled(if: InstalledDictionaryFixtures.contains("Collins COBUILD"), "Requires the optional Collins COBUILD dictionary"))
+    func aSideloadedUnkeyableDictionaryProducesNoCandidates() async throws {
+        let selector = EmbeddingSenseSelector()
         // A dictionary that marks senses with nothing a parser can key to.
         let collins = try DictionaryBridge.entries(for: "fine").entries
             .filter { $0.dictionary.name.contains("Collins COBUILD") }

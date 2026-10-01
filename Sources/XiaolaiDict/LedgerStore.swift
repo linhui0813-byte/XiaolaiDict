@@ -1,5 +1,6 @@
 import DictionaryModel
 import Foundation
+import XiaolaiDictBase
 import XiaolaiDictCore
 
 /// The ledger on disk, owned by one actor so lookups can be recorded from anywhere.
@@ -21,7 +22,7 @@ actor LedgerStore {
     /// orphans every reader's history**: the app would open an empty ledger beside the full one,
     /// and an empty ledger is indistinguishable from a working one. `LedgerStoreTests` pins both
     /// as literals so a rename cannot move them quietly.
-    static let directoryName = "XiaolaiDict"
+    static let directoryName = XiaolaiDictIdentity.dataDirectory
     static let fileName = "ledger.sqlite"
 
     /// `~/Library/Application Support/XiaolaiDict/ledger.sqlite`, created on first use, opened on a

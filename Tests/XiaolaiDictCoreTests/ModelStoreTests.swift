@@ -1221,8 +1221,13 @@ struct ModelStoreTests {
     @Test func theModelLivesWhereTheServiceWillLook() throws {
         let support = URL(filePath: "/tmp/support", directoryHint: .isDirectory)
         let store = ModelStore.standard(applicationSupport: support)
+        #if HUIDICT_LOCAL_BUILD
+        #expect(store.directory(for: LocalModelSize.standard.manifest).path()
+            == "/tmp/support/HuiDict/Models/mlx-community/Qwen3.5-4B-4bit@ab9c7a42fd31095a40634b3362317779dee9e7fa/")
+        #else
         #expect(store.directory(for: LocalModelSize.standard.manifest).path()
             == "/tmp/support/XiaolaiDict/Models/mlx-community/Qwen3.5-4B-4bit@ab9c7a42fd31095a40634b3362317779dee9e7fa/")
+        #endif
     }
     /// **A prune of a store that is not there makes nothing.** `removeStrays` creates the staging
     /// directory because the lock lives in it, and with intermediate directories that is the store

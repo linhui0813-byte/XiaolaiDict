@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import XiaolaiDictBase
 
 /// Where the local model lives on disk, and the one rule that makes it safe to load: **a model is
 /// loadable only once it is whole.**
@@ -33,7 +34,7 @@ public struct ModelStore: Sendable, Equatable {
     /// button that silently did nothing. Whether the directory can be *written* is the download's
     /// question, and it fails loudly there.
     public static func standard(applicationSupport: URL = .applicationSupportDirectory) -> ModelStore {
-        ModelStore(root: applicationSupport.appending(path: "XiaolaiDict", directoryHint: .isDirectory)
+        ModelStore(root: applicationSupport.appending(path: XiaolaiDictIdentity.dataDirectory, directoryHint: .isDirectory)
             .appending(path: directoryName, directoryHint: .isDirectory))
     }
 

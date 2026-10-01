@@ -15,7 +15,8 @@ set -euo pipefail
 out=${1:-}
 [ -n "$out" ] || { echo "usage: $0 <output-file>" >&2; exit 2; }
 
-state=.build/workspace-state.json
+build_root=${2:-.build}
+state=$build_root/workspace-state.json
 [ -f "$state" ] || { echo "error: $state is missing — resolve the packages first" >&2; exit 1; }
 
 # identity, where it came from, which version, and the directory it was checked out into. Sorted by
@@ -54,7 +55,7 @@ off the build, and a complete list is worth more than one that guesses.
 
 HEADER
     while IFS=$'\t' read -r identity location version subpath; do
-        directory=.build/checkouts/$subpath
+        directory=$build_root/checkouts/$subpath
         [ -d "$directory" ] || { echo "error: $identity is not checked out at $directory" >&2; exit 1; }
         licence=$(find "$directory" -maxdepth 1 -type f \
             \( -iname 'LICENSE' -o -iname 'LICENCE' -o -iname 'COPYING' \

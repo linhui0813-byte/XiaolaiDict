@@ -1,4 +1,5 @@
 import AppKit
+import XiaolaiDictBase
 import XiaolaiDictUI
 import SwiftUI
 
@@ -24,7 +25,7 @@ import SwiftUI
 struct XiaolaiDictScene: App {
     static let drawerID = "reading-history"
     static let lookupID = "lookup"
-    static let lookupTitle = "XiaolaiDict"
+    static let lookupTitle = XiaolaiDictIdentity.displayName
     static let setupID = "setup"
     static let reviewID = "review"
     static let libraryID = "library"

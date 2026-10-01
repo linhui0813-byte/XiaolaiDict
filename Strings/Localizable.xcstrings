@@ -808,6 +808,9 @@
     "Put off until %@" : {
       "comment" : "A library row for a card the reader set aside until a date"
     },
+    "Quit HuiDict" : {
+
+    },
     "Quit XiaolaiDict" : {
 
     },

@@ -340,7 +340,9 @@ struct SenseCoverageTests {
     /// Cambridge, Merriam-Webster and Longman Activator mark senses with fonts and colours; the
     /// three sideloaded conversions enabled here are the same shape. Entry level only, and never a
     /// claim to know which sense the reader read.
-    @Test(arguments: ["Collins COBUILD", "Longman Dictionary", "Oxford Collocation"])
+    @Test(.enabled(if: InstalledDictionaryFixtures.contains("Collins COBUILD", "Longman Dictionary", "Oxford Collocation"),
+                   "Requires the three optional sideloaded dictionary fixtures"),
+          arguments: ["Collins COBUILD", "Longman Dictionary", "Oxford Collocation"])
     func aSideloadedConversionHasNoSensesToKey(dictionary: String) throws {
         for entry in try Self.entries("fine", from: dictionary) {
             #expect(entry.senseCount == 0)
@@ -424,7 +426,8 @@ struct DictionaryCapabilityTests {
 
     /// A dictionary whose identifier is empty — every sideloaded conversion — is keyed by name, and
     /// marked as having entry ids that do not survive re-import.
-    @Test func aSideloadedDictionaryIsKeyedByNameAndSaysSo() throws {
+    @Test(.enabled(if: InstalledDictionaryFixtures.contains("Collins COBUILD"), "Requires the optional Collins COBUILD dictionary"))
+    func aSideloadedDictionaryIsKeyedByNameAndSaysSo() throws {
         let capabilities = DictionaryBridge.capabilities()
         let collins = try #require(capabilities.first { $0.identity.name.contains("Collins COBUILD") })
         #expect(collins.identity.identifier == nil)
@@ -461,7 +464,7 @@ struct DictionaryCapabilityTests {
     /// Both halves are load-bearing. If the plist read broke, the first assertion fails; if it
     /// started inventing languages for bundles that carry none, the second does. Measured
     /// 2026-09-22 across all seven enabled here.
-    @Test func appleAssetsDeclareTheirLanguagesAndSideloadedOnesDoNot() throws {
+    @Test func appleAssetsDeclareTheirLanguages() throws {
         let capabilities = DictionaryBridge.capabilities()
         func found(_ name: String) throws -> DictionaryCapability {
             try #require(
@@ -471,8 +474,16 @@ struct DictionaryCapabilityTests {
         }
         #expect(try !found("New Oxford American").languages.isEmpty)
         #expect(try !found("牛津英汉").languages.isEmpty)
-        #expect(try found("Collins COBUILD").languages.isEmpty)
-        #expect(try found("Longman Dictionary").languages.isEmpty)
+    }
+
+    @Test(.enabled(if: InstalledDictionaryFixtures.contains("Collins COBUILD", "Longman Dictionary"),
+                   "Requires the optional Collins COBUILD and Longman dictionaries"))
+    func sideloadedAssetsDeclareNoLanguages() throws {
+        let capabilities = DictionaryBridge.capabilities()
+        for name in ["Collins COBUILD", "Longman Dictionary"] {
+            let found = try #require(capabilities.filter { $0.identity.name.contains(name) }.oneAndOnly)
+            #expect(found.languages.isEmpty)
+        }
     }
 
     /// The rule the setup checklist asks: English headwords, explained in the reader's language.
@@ -501,7 +512,8 @@ struct DictionaryCapabilityTests {
     /// the one that catches a broken probe: `DCSCopyRecordsForSearchString` matches fuzzily, so
     /// without comparing headwords an English-only dictionary answers 水 too and every dictionary
     /// reports every script.
-    @Test func aDictionaryThatDeclaresNothingIsClassifiedByWhatItAnswers() throws {
+    @Test(.enabled(if: InstalledDictionaryFixtures.contains("Collins COBUILD"), "Requires the optional Collins COBUILD dictionary"))
+    func aDictionaryThatDeclaresNothingIsClassifiedByWhatItAnswers() throws {
         let capabilities = DictionaryBridge.capabilities()
         let collins = try #require(capabilities.first { $0.identity.name.contains("Collins COBUILD") })
         #expect(collins.languages.isEmpty, "the premise of this test is that it declares nothing")

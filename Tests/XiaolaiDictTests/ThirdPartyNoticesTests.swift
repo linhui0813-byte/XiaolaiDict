@@ -11,19 +11,26 @@ import XiaolaiDictTestSupport
 /// The generator is exercised rather than read: it is a build step, so nothing else would notice
 /// the day it silently produced an empty file.
 struct ThirdPartyNoticesTests {
+    private var buildRoot: String {
+        #if HUIDICT_LOCAL_BUILD
+        ".build/huidict-swift"
+        #else
+        ".build"
+        #endif
+    }
     private var repository: URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
     }
 
     /// Runs the generator with its working directory set to `root` — the script reads
-    /// `.build/workspace-state.json` and `.build/checkouts` relative to it, which is what lets a
-    /// fabricated root stand in for the real one.
-    private func generate(in root: URL, into output: URL) throws -> (status: Int32, errors: String) {
+    /// the selected build root's workspace state and checkouts relative to it, which lets a
+    /// fabricated root stand in for the real one. Local builds use their separate SwiftPM cache.
+    private func generate(in root: URL, into output: URL, buildRoot: String = ".build") throws -> (status: Int32, errors: String) {
         let script = repository.appending(path: "Tools/third-party-notices.sh")
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [script.path, output.path]
+        process.arguments = [script.path, output.path, buildRoot]
         process.currentDirectoryURL = root
         let errors = Pipe()
         process.standardError = errors
@@ -37,7 +44,7 @@ struct ThirdPartyNoticesTests {
     @Test func everyPackageTheBuildResolvesIsNamedWithItsLicence() throws {
         let scratch = TemporaryDirectory(named: "xiaolaidict-notices")
         let output = scratch.appending("ThirdPartyNotices.txt")
-        let run = try generate(in: repository, into: output)
+        let run = try generate(in: repository, into: output, buildRoot: buildRoot)
         try #require(run.status == 0, "the generator failed: \(run.errors)")
 
         let notices = try String(contentsOf: output, encoding: .utf8)
@@ -101,8 +108,8 @@ struct ThirdPartyNoticesTests {
         let scratch = TemporaryDirectory(named: "xiaolaidict-notices")
         let first = scratch.appending("first.txt")
         let second = scratch.appending("second.txt")
-        try #require(generate(in: repository, into: first).status == 0)
-        try #require(generate(in: repository, into: second).status == 0)
+        try #require(generate(in: repository, into: first, buildRoot: buildRoot).status == 0)
+        try #require(generate(in: repository, into: second, buildRoot: buildRoot).status == 0)
         #expect(try Data(contentsOf: first) == Data(contentsOf: second))
     }
 }

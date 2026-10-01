@@ -551,7 +551,7 @@ final class XiaolaiDictApp: NSObject, NSApplicationDelegate {
     static func menuBarImage() -> NSImage? {
         guard let url = Bundle.main.url(forResource: "MenuBarIcon", withExtension: "svg"),
               let image = NSImage(contentsOf: url)
-        else { return NSImage(systemSymbolName: "character.book.closed", accessibilityDescription: "XiaolaiDict") }
+        else { return NSImage(systemSymbolName: "character.book.closed", accessibilityDescription: XiaolaiDictIdentity.displayName) }
         image.isTemplate = true
         image.size = NSSize(width: 22, height: 22)
         return image

@@ -73,7 +73,11 @@ struct XiaolaiDictMenu: View {
         }
 
         Divider()
+        #if HUIDICT_LOCAL_BUILD
+        Button("Quit HuiDict") { NSApp.terminate(nil) }
+        #else
         Button("Quit XiaolaiDict") { NSApp.terminate(nil) }
+        #endif
     }
 
     /// Which dictionary XiaolaiDict studies from (decision D7), and what choosing each one can key: a

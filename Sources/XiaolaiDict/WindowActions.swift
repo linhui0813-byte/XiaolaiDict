@@ -128,7 +128,7 @@ struct MenuBarLabel: View {
             if let icon = XiaolaiDictApp.menuBarImage() {
                 Image(nsImage: icon)
             } else {
-                Text("XiaolaiDict")   // no image at all is still no reason to show nothing
+                Text(verbatim: XiaolaiDictIdentity.displayName)
             }
         }
         .task {

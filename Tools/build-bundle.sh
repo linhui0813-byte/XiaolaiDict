@@ -10,6 +10,7 @@
 #
 # Environment:
 #   XIAOLAIDICT_SIGN_ID       Developer ID Application identity (required; see the Makefile for why)
+#   HUIDICT_LOCAL_BUILD=1     separate HuiDict app, locally signed, with exact code-hash peer checks
 #   XIAOLAIDICT_BUILD_NUMBER  CFBundleVersion for a release: a positive integer from the release counter.
 #                      Unset, a development build is numbered from the UTC clock.
 #
@@ -19,8 +20,18 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-readonly APP_NAME=XiaolaiDict
-readonly BUNDLE_ID=com.xiaolaidict
+# The explicit local fork has its own identity, cache, staging and output. The default Developer
+# ID path never silently falls back to ad-hoc signing.
+readonly LOCAL_BUILD=${HUIDICT_LOCAL_BUILD:-0}
+case "$LOCAL_BUILD" in
+    0) APP_NAME=XiaolaiDict; BUNDLE_ID=com.xiaolaidict; BUILD_ROOT=.build; STAGE_ROOT=.build/stage; RESOURCES=.build/resources ;;
+    1) APP_NAME=HuiDict; BUNDLE_ID=com.linhui.huidict; BUILD_ROOT=.build/huidict-swift; STAGE_ROOT=.build/huidict-stage; RESOURCES=.build/huidict-resources
+       [ -z "${XIAOLAIDICT_BUILD_NUMBER:-}" ] || { echo "error: local builds cannot be notarized releases" >&2; exit 1; }
+       export XIAOLAIDICT_SIGN_ID=- ;;
+    *) echo "error: HUIDICT_LOCAL_BUILD must be 0 or 1" >&2; exit 1 ;;
+esac
+readonly APP_NAME BUNDLE_ID BUILD_ROOT STAGE_ROOT RESOURCES
+readonly APP_PRODUCT=XiaolaiDict
 # The platform floor, in one place: the three plists declare it, `verify_bundle_metadata` holds them
 # to it, and `actool` validates the icon against it. A mismatch here is an icon checked for a macOS
 # the app does not ship to.
@@ -45,7 +56,6 @@ readonly CONFIG=release
 readonly APP=.build/$APP_NAME.app
 # Assembled here, and published by an atomic swap only when every check has passed: $APP is the
 # previous good bundle or this one — never a half-built mixture that looks up to date.
-readonly STAGE_ROOT=.build/stage
 readonly STAGE=$STAGE_ROOT/$APP_NAME.app
 readonly XPC_PATH=Contents/XPCServices/$SERVICE.xpc
 readonly MODEL_XPC_PATH=Contents/XPCServices/$MODEL_SERVICE.xpc
@@ -59,8 +69,8 @@ readonly METALLIB_PATH=$MODEL_XPC_PATH/Contents/Resources/$METAL_BUNDLE/Contents
 readonly BUNDLE_DIGEST=.build/$APP_NAME.app.inputs-sha256
 readonly ICON_DIGEST=.build/icon.inputs-sha256
 # The bundle is built from this copy of Resources/, taken under the icon generator's own lock.
-readonly RESOURCES=.build/resources
-readonly LOCK=.build/bundle.lock
+if [ "$LOCAL_BUILD" = 1 ]; then LOCK=.build/huidict-bundle.lock; else LOCK=.build/bundle.lock; fi
+readonly LOCK
 readonly CATALOG=Strings/Localizable.xcstrings
 # What the About pane opens: every linked package's licence, gathered by `third-party-notices.sh`.
 readonly NOTICES=ThirdPartyNotices.txt
@@ -81,7 +91,7 @@ note() { echo "$*"; }
 # product's dependency closure in that file names exactly the bundle targets it can load. Filtering
 # by `Package.resolved` instead admitted all thirteen pins, `swift-syntax` and
 # `swift-argument-parser` among them, which the model service does not link at all.
-readonly PIF=.build/manifest.pif
+readonly PIF=$BUILD_ROOT/manifest.pif
 
 # The bundle targets in the model service's dependency closure, by name. Whether each one actually
 # produced a bundle is a separate question, answered by the products directory: a target with no
@@ -138,7 +148,9 @@ BUNDLE_LIST=()
 # `inputs_digest` already covers, so a release and a development build of the same tree already
 # differ there.
 swift_build() {
-    if is_release; then
+    if [ "$LOCAL_BUILD" = 1 ]; then
+        swift build --scratch-path "$BUILD_ROOT" -c "$CONFIG" -Xswiftc -DHUIDICT_LOCAL_BUILD "$@"
+    elif is_release; then
         swift build -c "$CONFIG" "$@"
     else
         swift build -c "$CONFIG" -Xswiftc -DXIAOLAIDICT_CAPTURE_INSTRUMENTS "$@"
@@ -261,6 +273,21 @@ PY
     rm -rf "$RESOURCES"
     mv "$RESOURCES.new" "$RESOURCES"
     verify_icon_outputs "$RESOURCES"
+    if [ "$LOCAL_BUILD" = 1 ]; then
+        python3 - "$RESOURCES" "$BUNDLE_ID" "$APP_NAME" <<'LOCAL_PLISTS'
+import plistlib, sys
+from pathlib import Path
+root, identity, name = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+for file, suffix in [("Info.plist", ""), ("DictionaryService-Info.plist", ".DictionaryService"), ("ModelService-Info.plist", ".ModelService")]:
+    path = root / file
+    value = plistlib.loads(path.read_bytes())
+    value["CFBundleIdentifier"] = identity + suffix
+    if not suffix:
+        value.update(CFBundleDisplayName=name, CFBundleName=name, CFBundleExecutable=name)
+    path.write_bytes(plistlib.dumps(value))
+(root / "XiaolaiDict.icon").rename(root / (name + ".icon"))
+LOCAL_PLISTS
+    fi
 }
 
 # The generator first — it repairs a pair an interrupted run left mixed, and brings stale outputs
@@ -473,6 +500,13 @@ verify_signatures() {
     for part in "${parts[@]}"; do
         local described
         described=$(codesign -dvvv "$part" 2>&1 || true)
+        if [ "$LOCAL_BUILD" = 1 ]; then
+            grep -q '^Signature=adhoc' <<<"$described" \
+                || { echo "$part is not locally signed"; return 1; }
+            grep -q 'flags=.*runtime' <<<"$described" \
+                || { echo "$part has no hardened runtime"; return 1; }
+            continue
+        fi
         team=$(grep '^TeamIdentifier=' <<<"$described" | head -1)
         authority=$(grep '^Authority=' <<<"$described" | head -1)
         case $team in
@@ -614,7 +648,7 @@ verify_capture_instruments() {
     [ -f "$binary" ] || { echo "no app binary to check for the capture instruments"; return 1; }
     refusals=$(strings -a "$binary" 2>/dev/null | grep -c 'is a development instrument and is not built into a release' || true)
     live=$(strings -a "$binary" 2>/dev/null | grep -c 'has no window to find its process by' || true)
-    if is_release; then
+    if is_release || [ "$LOCAL_BUILD" = 1 ]; then
         [ "${refusals:-0}" -ge 1 ] \
             || { echo "a release does not refuse --read-point/--read-selection: the gate did not compile in"; return 1; }
         [ "${live:-0}" -eq 0 ] \
@@ -676,15 +710,17 @@ assemble() {
     # Output captured, then matched: `producer | grep -q` fails under pipefail whenever grep stops
     # reading early and the producer dies of SIGPIPE — a false failure for a true match.
     local identities
-    identities=$(security find-identity -v -p codesigning)
-    grep -qF "$XIAOLAIDICT_SIGN_ID" <<<"$identities" \
-        || fail "signing identity not in the keychain: $XIAOLAIDICT_SIGN_ID — set SIGN_ID to another Developer ID Application identity"
+    if [ "$LOCAL_BUILD" = 0 ]; then
+        identities=$(security find-identity -v -p codesigning)
+        grep -qF "$XIAOLAIDICT_SIGN_ID" <<<"$identities" \
+            || fail "signing identity not in the keychain: $XIAOLAIDICT_SIGN_ID — set SIGN_ID to another Developer ID Application identity"
+    fi
 
     # One build for all three executable products: they share every module but their mains.
     swift_build
     local products
     products=$(swift_build --show-bin-path)
-    [ -x "$products/$APP_NAME" ] && [ -x "$products/$SERVICE" ] && [ -x "$products/$MODEL_SERVICE" ] \
+    [ -x "$products/$APP_PRODUCT" ] && [ -x "$products/$SERVICE" ] && [ -x "$products/$MODEL_SERVICE" ] \
         || fail "swift build produced no $APP_NAME, $SERVICE or $MODEL_SERVICE"
     # Beside the products, where SwiftPM puts resource bundles. Fails closed: a service shipped
     # without its shaders loads, then dies at its first GPU op — a failure that looks like a model
@@ -701,7 +737,7 @@ assemble() {
     rm -rf "$STAGE_ROOT"
     mkdir -p "$contents/MacOS" "$contents/Resources" "$xpc/Contents/MacOS" \
         "$model_xpc/Contents/MacOS" "$model_xpc/Contents/Resources"
-    cp "$products/$APP_NAME" "$contents/MacOS/$APP_NAME"
+    cp "$products/$APP_PRODUCT" "$contents/MacOS/$APP_NAME"
     cp "$products/$SERVICE" "$xpc/Contents/MacOS/$SERVICE"
     cp "$products/$MODEL_SERVICE" "$model_xpc/Contents/MacOS/$MODEL_SERVICE"
     local resource
@@ -715,7 +751,7 @@ assemble() {
     # The licences of what is statically linked into the two services. Generated here rather than
     # tracked, so it cannot drift from `Package.resolved` — which is itself one of the inputs this
     # bundle's digest is taken over, so a dependency changed is a bundle rebuilt.
-    Tools/third-party-notices.sh "$contents/Resources/$NOTICES" \
+    Tools/third-party-notices.sh "$contents/Resources/$NOTICES" "$BUILD_ROOT" \
         || fail "the third-party notices could not be gathered"
 
     # The build number is stamped into the copies, not the tracked files: it is a property of the
@@ -763,7 +799,7 @@ compile_icon() {
     xcrun actool --compile "$PWD/$contents/Resources" --app-icon "$APP_NAME" \
         --output-partial-info-plist "$PWD/$partial" \
         --platform macosx --minimum-deployment-target "$MINIMUM_MACOS" --target-device mac \
-        --errors --warnings --output-format human-readable-text "$PWD/$RESOURCES/XiaolaiDict.icon" \
+        --errors --warnings --output-format human-readable-text "$PWD/$RESOURCES/$APP_NAME.icon" \
         >"$report" 2>&1 || { cat "$report"; fail "actool failed"; }
     if grep -qiE ": (warning|error):" "$report"; then
         cat "$report"
@@ -878,7 +914,7 @@ publish() {
 # Builds and publishes unless the published bundle already matches its inputs and verifies.
 build() {
     [ -n "${XIAOLAIDICT_SIGN_ID:-}" ] || fail "XIAOLAIDICT_SIGN_ID is not set"
-    ensure_icon
+    if [ "$LOCAL_BUILD" = 0 ]; then ensure_icon; fi
     snapshot_resources
     local digest
     digest=$(bundle_inputs_digest)

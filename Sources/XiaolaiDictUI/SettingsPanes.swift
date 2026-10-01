@@ -1,5 +1,6 @@
 import AppKit
 import DictionaryModel
+import XiaolaiDictBase
 import XiaolaiDictCore
 import AVFoundation
 import SwiftUI
@@ -834,7 +835,7 @@ struct AboutPane: View {
                         .accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: scale.space.line) {
-                    Text("XiaolaiDict")
+                    Text(verbatim: XiaolaiDictIdentity.displayName)
                         .font(.system(size: scale.text.display, weight: .semibold))
                     Text("A menu-bar dictionary for macOS.")
                         .foregroundStyle(.secondary)

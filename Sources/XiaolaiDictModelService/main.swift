@@ -13,6 +13,7 @@ import Synchronization
 // edited (the MLX-in-XPC spike, S4). Hence `@preconcurrency`.
 @preconcurrency import Tokenizers
 import XiaolaiDictBase
+import XiaolaiDictPeer
 import XPC
 import os
 
@@ -77,7 +78,7 @@ let requests = DispatchQueue(label: "\(XiaolaiDictIdentity.modelService).request
 let listener = try XPCListener(
     service: XiaolaiDictIdentity.modelService,
     targetQueue: requests,
-    requirement: .isFromSameTeam(andMatchesSigningIdentifier: XiaolaiDictIdentity.app)
+    requirement: try ServicePeer.appRequirement()
 ) { request in
     // One session's work, tracked on its own: a cancellation means *this* client has gone, and
     // taking other sessions' generations away with it would abandon callers still waiting.

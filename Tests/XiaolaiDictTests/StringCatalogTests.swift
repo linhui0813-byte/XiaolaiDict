@@ -310,6 +310,7 @@ struct StringCatalogTests {
     /// `AGENTS.md` describes as worse than no rule, because it still reads as one.
     static let targetsBelowTheViewLayer = [
         "Sources/XiaolaiDictBase", "Sources/DictionaryModel", "Sources/ModelKit",
+        "Sources/XiaolaiDictPeer",
         "Sources/XiaolaiDictCore", "Sources/LocalModel", "Sources/DictionaryBridge",
         // Added 2026-09-27. Absent since the target was created, so the scan above did not cover it —
         // which is exactly what `everyTargetBelowTheViewLayerIsScanned` is for, and it was failing.

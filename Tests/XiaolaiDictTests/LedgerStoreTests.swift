@@ -55,7 +55,11 @@ struct LedgerStoreTests {
             studying: Set(ProbeScript.allCases)).isEmpty)
         // Built from `scratch` rather than from a copy of its URL, so the directory is still alive
         // at the assertion: nothing else here holds it, and its removal is its deinit.
+        #if HUIDICT_LOCAL_BUILD
+        let ledger = scratch.appending("HuiDict/ledger.sqlite").path
+        #else
         let ledger = scratch.appending("XiaolaiDict/ledger.sqlite").path
+        #endif
         #expect(FileManager.default.fileExists(atPath: ledger), "the ledger is not where the reader's history is")
     }
 }

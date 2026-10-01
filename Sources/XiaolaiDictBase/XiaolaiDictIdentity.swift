@@ -3,7 +3,14 @@
 /// The bundles' Info.plists must say the same — `XiaolaiDictIdentityTests` holds all three to it,
 /// and the Makefile holds the built bundle to them.
 public enum XiaolaiDictIdentity {
+    #if HUIDICT_LOCAL_BUILD
+    public static let app = "com.linhui.huidict"
+    public static let dataDirectory = "HuiDict"
+    #else
     public static let app = "com.xiaolaidict"
+    public static let dataDirectory = "XiaolaiDict"
+    #endif
+    public static let displayName = dataDirectory
     /// Derived from the app's, so changing that name cannot leave a service behind under the old one.
     public static let dictionaryService = "\(app).DictionaryService"
     /// The local model's service. Its own process, not the dictionary service's: a segfault-prone

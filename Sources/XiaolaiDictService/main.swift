@@ -4,6 +4,7 @@ import Dispatch
 import Foundation
 import PhraseLookup
 import XiaolaiDictBase
+import XiaolaiDictPeer
 import os
 import XPC
 
@@ -11,8 +12,8 @@ import XPC
 // update makes it segfault, this process dies, launchd restarts it on the next request, and XiaolaiDict
 // shows the public API's plain-text definition meanwhile.
 //
-// Only XiaolaiDict may connect: the same team and XiaolaiDict's own signing identifier. Without that, any
-// process that found this service could drive a private API through it.
+// Only the host app may connect: its team and identifier in a release, or the exact signed host
+// code in the independent local build. Neither path admits an arbitrary process on this Mac.
 
 let log = Logger(subsystem: XiaolaiDictIdentity.dictionaryService, category: "lookup")
 
@@ -58,7 +59,7 @@ DispatchQueue.global(qos: .utility).async {
 let listener = try XPCListener(
     service: XiaolaiDictIdentity.dictionaryService,
     targetQueue: lookups,
-    requirement: .isFromSameTeam(andMatchesSigningIdentifier: XiaolaiDictIdentity.app)
+    requirement: try ServicePeer.appRequirement()
 ) { request in
     request.accept { (message: ServiceRequest) -> (any Encodable)? in
         watchdog.run { DictionaryBridge.reply(to: message, phrases: phrases) }

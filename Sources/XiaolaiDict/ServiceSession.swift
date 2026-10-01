@@ -2,6 +2,7 @@ import DictionaryModel
 import ModelKit
 import XiaolaiDictBase
 import XiaolaiDictCore
+import XiaolaiDictPeer
 import XPC
 
 /// One XPC service's session, as both clients keep it: opened on demand, numbered, and forgotten
@@ -48,7 +49,9 @@ struct XPCServiceTransport<Request: Encodable & Sendable, Reply: Decodable & Sen
     /// `onCancel` runs when the session ends on its own — the service crashed or exited — so the
     /// client opens a fresh one next time and launchd relaunches the service.
     init(service: String, onCancel: @escaping @Sendable () -> Void) throws {
-        session = try XPCSession(xpcService: service, cancellationHandler: { _ in onCancel() })
+        session = try XPCSession(xpcService: service,
+                                 requirement: ServicePeer.serviceRequirement(identifier: service),
+                                 cancellationHandler: { _ in onCancel() })
     }
 
     func send(_ request: Request) async throws -> Reply {

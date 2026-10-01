@@ -29,6 +29,7 @@ struct ModuleBoundaryTests {
         // No domain vocabulary, and so almost no framework. If this set grows, the target has
         // stopped being what it is for.
         "XiaolaiDictBase": ["Dispatch", "Synchronization"],
+        "XiaolaiDictPeer": ["Foundation", "LightweightCodeRequirements", "Security", "XPC"],
         // CryptoKit is here because `DictionarySense.hash` keys a sense the publisher gave no id by
         // a SHA-256 of its own text, and `DictionaryBridge` builds those values — so it is on the
         // dictionary service's own execution path and cannot be moved out of it.

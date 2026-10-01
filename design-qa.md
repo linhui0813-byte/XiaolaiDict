@@ -1,6 +1,6 @@
 # Compact lookup design QA
 
-Final result: pass for the native view. Production build and deployment remain blocked.
+Final result: native view passed; the complete local HuiDict build and installation are verified.
 
 The visual comparison passes. The target is Hui's supplied `refused` lookup screenshot. The
 implementation is the actual native SwiftUI card rendered with synthetic bilingual fixture data.
@@ -47,9 +47,29 @@ this workaround. The app target also compiled in that harness.
 Three catalog infrastructure tests were excluded: two depend on the full package's source layout,
 and the catalog compilation test requires the unavailable `xcstringstool`.
 
-## Remaining verification
+## Complete local app verification
 
-- A production macOS 27 build is blocked by missing Foundation Models and SwiftUI compiler
-  plugins. The selected Command Line Tools also lack the Metal compiler and catalog compiler.
-- No valid code-signing identity is available. The installed signed app has not been replaced;
-  deploying this branch as a working app remains blocked.
+Xcode 27.0 (27A266a), Swift 6.4 and Apple's Metal Toolchain are installed. The actual package now
+builds against the macOS 27 SDK with its Foundation Models and SwiftUI compiler plugins. No view
+workarounds are used in the packaged app.
+
+- All seven Swift test targets passed, reporting 2,020 tests. Tests for optional sideloaded
+  dictionaries skip with explicit fixture requirements when absent. Upstream Developer ID bundle
+  tests skip because that separately signed release is not built here.
+- All 65 Python tool tests passed, including actual icon compilation and rendering. The Chinese
+  string catalog compiled, and the separate HuiDict icon name was verified.
+- `.build/HuiDict.app` is an optimized local build containing both XPC services, all required model
+  resource bundles, Metal shaders, translations and third-party notices. Bundle metadata, service
+  boundaries, hardened runtime signatures and sealed resources passed verification.
+- The local identity is `com.linhui.huidict`. Services pin the exact signed host code; the host
+  pins its bundled services. Real XPC tests accepted the correct process and rejected incorrect
+  code hashes and signing identifiers. Unsigned and modified resource bundles were refused.
+- The installed copy at `~/Applications/HuiDict.app` passed deep signature verification, and all
+  three executable hashes matched the built copy. Its actual dictionary service returned Oxford
+  English–Chinese entries for `refused` in 124 ms; its model service executed a GPU operation.
+- The existing primary dictionary choice was copied to HuiDict. HuiDict has separate preferences,
+  history and model storage, and its local build does not require a paid Developer ID.
+
+The live compact/expanded control checks above still describe the approved fixture preview.
+Screen word capture in HuiDict requires its own Accessibility and Screen Recording grants and
+has not yet been verified. The local app is not notarized for public distribution.
