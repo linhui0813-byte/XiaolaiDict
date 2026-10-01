@@ -61,6 +61,8 @@ struct CompactLookupCardView: View {
     @Environment(\.closeLookup) private var close
     let card: LookupCard
     var incomplete = false
+    var wordTranslation: String? = nil
+    var hasWordContext = false
     let onMore: () -> Void
 
     private var summary: CompactLookupSummary { CompactLookupSummary(card: card) }
@@ -101,6 +103,27 @@ struct CompactLookupCardView: View {
                 Spacer(minLength: 0)
             }
             .foregroundStyle(.secondary)
+
+            if let form = EnglishLookupForm.description(of: card) {
+                Text(verbatim: form)
+                    .font(.system(size: scale.text.small))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let wordTranslation {
+                VStack(alignment: .leading, spacing: scale.space.line) {
+                    Text(verbatim: wordTranslation)
+                        .font(.system(size: scale.text.body, weight: .medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Group {
+                        if hasWordContext { Text("In context · Qwen") }
+                        else { Text("Word translation · Qwen") }
+                    }
+                    .font(.system(size: scale.text.small))
+                    .foregroundStyle(.secondary)
+                }
+            }
 
             meanings
 

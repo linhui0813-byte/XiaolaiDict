@@ -76,6 +76,9 @@ case .success(.modelReport):
 case .success(.senseReport):
     runHeadlessReport { await SenseReport.run() }
 
+case .success(.wordTranslationReport):
+    runHeadlessReport { await WordTranslationReport.run() }
+
 // Shows the lookup panel, so AppKit's runloop and `.accessory` — the same two reasons
 // `--history-report` and `--settings-report` need them. It also posts mouse events, which need a
 // window-server connection for the same reason a capture does.

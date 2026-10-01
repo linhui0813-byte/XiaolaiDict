@@ -132,17 +132,20 @@ public struct TranslationActions: Sendable {
     public var sourceLanguage: @Sendable (String) -> String?
     public var canDownloadModel: Bool
     public var downloadModel: @MainActor () -> Void
+    public var canTranslateWords: Bool
 
     public init(
         translate: @escaping @Sendable (TranslationQuestion) async -> TranslationOutcome,
         target: String, sourceLanguage: @escaping @Sendable (String) -> String?,
-        canDownloadModel: Bool, downloadModel: @escaping @MainActor () -> Void
+        canDownloadModel: Bool, downloadModel: @escaping @MainActor () -> Void,
+        canTranslateWords: Bool = false
     ) {
         self.translate = translate
         self.target = target
         self.sourceLanguage = sourceLanguage
         self.canDownloadModel = canDownloadModel
         self.downloadModel = downloadModel
+        self.canTranslateWords = canTranslateWords
     }
 
     /// **`nil` rather than a language, so a view built without the app still offers to translate.**

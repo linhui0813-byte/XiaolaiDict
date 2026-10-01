@@ -437,6 +437,7 @@ public struct LookupPanelContent: View {
     /// generation already inside the model service runs until the service bounds it.
     @State private var explaining: Task<Void, Never>?
     @State private var translation: TranslationPane?
+    @State private var wordTranslation: WordLookupTranslation?
     /// The one translation in flight. Replacing it cancels the one before, so two clicks cannot
     /// finish out of order, and it is cancelled when the card goes away. **Cancelling stops this
     /// side waiting** — a generation already running inside the model service is not something a
@@ -573,6 +574,17 @@ public struct LookupPanelContent: View {
             let sentence = presentation.sentence ?? ""
             sourceLanguage = sentence.isEmpty ? nil : translator.sourceLanguage(sentence)
         }
+        .task(id: wordTranslationQuestion) {
+            guard let question = wordTranslationQuestion else { wordTranslation = nil; return }
+            let outcome = await translator.translate(question)
+            guard !Task.isCancelled else { return }
+            wordTranslation = WordLookupTranslation(outcome, question: question)
+        }
+    }
+
+    private var wordTranslationQuestion: TranslationQuestion? {
+        guard translator.canTranslateWords, let entry else { return nil }
+        return TranslationQuestion.word(card(for: entry), target: translator.target)
     }
 
     /// Whether the sentence is already in the reader's own language — compared **now**, against a
@@ -623,7 +635,10 @@ public struct LookupPanelContent: View {
     }
 
     private func compactCard(_ card: LookupCard) -> some View {
-        CompactLookupCardView(card: card, incomplete: compactIsIncomplete) {
+        CompactLookupCardView(
+            card: card, incomplete: compactIsIncomplete,
+            wordTranslation: wordTranslation?.text(for: wordTranslationQuestion),
+            hasWordContext: card.sentence?.isEmpty == false) {
             showingDetails = true
         }
     }
@@ -698,7 +713,7 @@ public struct LookupPanelContent: View {
                     // translation are two answers to two questions, and each is drawn only while its
                     // own question still stands.
                     if let explanation, let sentence = presentation.sentence,
-                       explanation.of == SentenceQuestion.reading(card(for: entry), sentence: sentence) {
+                       explanation.of == SentenceQuestion.reading(card(for: entry), sentence: sentence, target: translator.target) {
                         SentencePaneView(explanation: explanation.answer)
                     }
                     matchCaveat(entry)
@@ -1115,7 +1130,7 @@ public struct LookupPanelContent: View {
             // asked and what is drawn cannot be two different questions. It used to be assembled here
             // and thrown away, which is how an answer came to outlive its own question.
             guard let entry, let sentence = presentation.sentence else { return }
-            let question = SentenceQuestion.reading(card(for: entry), sentence: sentence)
+            let question = SentenceQuestion.reading(card(for: entry), sentence: sentence, target: translator.target)
             explaining?.cancel()
             let explain = explainer.explain
             explaining = Task {

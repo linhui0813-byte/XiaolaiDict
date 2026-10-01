@@ -223,7 +223,9 @@ public actor ModelService {
                 model: model, instructions: ModelPrompt.translationInstructions(for: question))
             let text = try await session.respond(
                 to: ModelPrompt.translation(question),
-                options: GenerationOptions(maximumResponseTokens: ModelPrompt.translationTokens(for: question)))
+                // A quick word gloss chooses a grammatical reading; random variation adds no value.
+                options: GenerationOptions(temperature: question.wordContext == nil ? nil : 0,
+                                           maximumResponseTokens: ModelPrompt.translationTokens(for: question)))
                 .content.trimmingCharacters(in: .whitespacesAndNewlines)
             // An echo reads as success and is not one: 9B once handed its English back untranslated.
             // **Told the target too**, so an answer still in the source's language is caught here

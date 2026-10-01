@@ -6,6 +6,16 @@ import XiaolaiDictCore
 /// The translation pane's engine order: the local model where it is, Apple's framework where it is
 /// not, and never an answer that does not say which engine gave it.
 struct SentenceTranslatorTests {
+    @Test func aContextualWordTranslationDoesNotFallBackToAContextFreeAppleTranslation() async {
+        let appleAsked = Recorder(0)
+        let question = TranslationQuestion(sentence: "refused", target: "zh-Hans", wordContext: "The application was refused.")
+        let outcome = await Self.translator(local: .failure(.notInstalled), apple: .translated("拒绝"), appleAsked: appleAsked)
+            .translate(question)
+        #expect(outcome == .unavailable)
+        #expect(appleAsked.withLock { $0 } == 0)
+        let translated = await Self.translator(local: .translation("被拒绝"), apple: .failed).translate(question)
+        #expect(translated == .translated("被拒绝", by: .localModel))
+    }
     /// **An echo of a quoted sentence is still an echo.** The reader's captured sentence can carry
     /// its own quotation marks — dialogue in a novel is the ordinary case — and unwrapping only the
     /// answer made the two normalise differently, so the check that exists to catch an echo passed it.

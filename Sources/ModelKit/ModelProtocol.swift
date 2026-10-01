@@ -47,11 +47,11 @@ public struct SenseQuestion: Codable, Sendable, Equatable {
 /// subsystems side by side that can disagree while both look certain; fed the sense, Qwen sharpened
 /// 船舱 to 货舱 in every run that had it. The sense's text is the publisher's, and it may go to this
 /// model only because the model runs on this Mac — the same boundary `ExplainerTier` draws.
-public struct TranslationQuestion: Codable, Sendable, Equatable {
+public struct TranslationQuestion: Codable, Sendable, Hashable {
     /// The word the reader met and what it meant — **one value, because half of it is useless**:
     /// a sense with no word to attach it to was silently dropped, and the pane then rendered an
     /// unguided translation as though it had been told the sense.
-    public struct MetSense: Codable, Sendable, Equatable {
+    public struct MetSense: Codable, Sendable, Hashable {
         public let term: String
         /// The text of the sense the reader met — tapped, or marked by the selector.
         public let sense: String
@@ -66,11 +66,15 @@ public struct TranslationQuestion: Codable, Sendable, Equatable {
     /// BCP-47, the reader's own language: "zh-Hans".
     public let target: String
     public let met: MetSense?
+    /// Present for a word lookup: `sentence` holds the selected word and this holds its context.
+    /// An empty value asks for the word's common translations without claiming a contextual sense.
+    public let wordContext: String?
 
-    public init(sentence: String, target: String, met: MetSense? = nil) {
+    public init(sentence: String, target: String, met: MetSense? = nil, wordContext: String? = nil) {
         self.sentence = sentence
         self.target = target
         self.met = met
+        self.wordContext = wordContext
     }
 }
 

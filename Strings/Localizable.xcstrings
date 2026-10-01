@@ -1,106 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Close lookup": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "关闭取词"
-          }
-        }
-      }
-    },
-    "Entry: %@": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "词条：%1$@"
-          }
-        }
-      }
-    },
-    "Partial result": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "结果可能不完整"
-          }
-        }
-      }
-    },
-    "More meanings": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "更多释义"
-          }
-        }
-      }
-    },
-    "Show all meanings, examples, and context": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "查看全部释义、例句和上下文"
-          }
-        }
-      }
-    },
-    "Meaning in context is uncertain": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "当前语境下的释义尚不确定"
-          }
-        }
-      }
-    },
-    "Open details to read this dictionary entry": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "展开详情以阅读词条"
-          }
-        }
-      }
-    },
-    "Examples and details": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "例句与详细释义"
-          }
-        }
-      }
-    },
-    "Full dictionary entry": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "完整词典条目"
-          }
-        }
-      }
-    },
-    "Fewer details": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "收起详情"
-          }
-        }
-      }
-    },
     " (a guess — not confirmed)" : {
       "comment" : "Appended to copied text where the sense was not confirmed"
     },
@@ -274,6 +174,9 @@
     "%lld things are still needed." : {
 
     },
+    "-ing form of %@" : {
+
+    },
     "A guess — not confirmed" : {
       "comment" : "On a pinned note whose sense the selector proposed"
     },
@@ -394,6 +297,16 @@
     "Clear the search" : {
 
     },
+    "Close lookup" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭取词"
+          }
+        }
+      }
+    },
     "Comfortable" : {
 
     },
@@ -471,6 +384,16 @@
     "Easy" : {
 
     },
+    "Entry: %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "词条：%1$@"
+          }
+        }
+      }
+    },
     "Everything needed has been granted." : {
       "comment" : "Permissions pane, when nothing is missing"
     },
@@ -479,6 +402,16 @@
     },
     "Everything this Mac can do is in place. Anything here can still be changed." : {
 
+    },
+    "Examples and details" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "例句与详细释义"
+          }
+        }
+      }
     },
     "Explain this sentence" : {
 
@@ -489,10 +422,23 @@
     "Fastest available" : {
 
     },
+    "Fewer details" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收起详情"
+          }
+        }
+      }
+    },
     "First that marks senses" : {
 
     },
     "Forgot" : {
+
+    },
+    "Form of %@" : {
 
     },
     "From" : {
@@ -506,6 +452,16 @@
     },
     "Frosted keeps cards and headings easy to read over any window. Clear shows more of what is behind the drawer — over a dark terminal it stays dark instead of turning grey." : {
 
+    },
+    "Full dictionary entry" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完整词典条目"
+          }
+        }
+      }
     },
     "Gesture" : {
 
@@ -536,6 +492,9 @@
       }
     },
     "Hugging Face" : {
+
+    },
+    "In context · Qwen" : {
 
     },
     "In the panel" : {
@@ -626,11 +585,31 @@
     "Mark the word" : {
 
     },
+    "Meaning in context is uncertain" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前语境下的释义尚不确定"
+          }
+        }
+      }
+    },
     "Model" : {
 
     },
     "ModelScope" : {
 
+    },
+    "More meanings" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更多释义"
+          }
+        }
+      }
     },
     "Name the app a word was read in" : {
 
@@ -769,6 +748,16 @@
     "Open VoiceOver Utility" : {
 
     },
+    "Open details to read this dictionary entry" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "展开详情以阅读词条"
+          }
+        }
+      }
+    },
     "Open in Dictionary" : {
 
     },
@@ -778,10 +767,23 @@
     "Out of the way until tomorrow. Nothing about your memory is recorded" : {
 
     },
+    "Partial result" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "结果可能不完整"
+          }
+        }
+      }
+    },
     "Password managers" : {
 
     },
     "Password managers cannot be removed. The sentence a word was read in is recorded, and there every sentence is a secret." : {
+
+    },
+    "Past tense / past participle of %@" : {
 
     },
     "Pause %lld" : {
@@ -791,6 +793,9 @@
 
     },
     "Permissions" : {
+
+    },
+    "Plural of %@" : {
 
     },
     "Practice — nothing is scheduled" : {
@@ -942,6 +947,16 @@
     },
     "Show Less" : {
       "comment" : "Closes a day's pile of cards"
+    },
+    "Show all meanings, examples, and context" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看全部释义、例句和上下文"
+          }
+        }
+      }
     },
     "Show every script" : {
 
@@ -1126,6 +1141,9 @@
     "Third-party notices" : {
 
     },
+    "Third-person singular of %@" : {
+
+    },
     "This board was opened without the model's state, so it cannot say what is here." : {
 
     },
@@ -1250,6 +1268,9 @@
     "Without a local model, senses are picked by a simpler match. Sentences are translated by Apple where its language pack is installed — which cannot be told which sense you met, and misreads some." : {
 
     },
+    "Word translation · Qwen" : {
+
+    },
     "Words in a terminal, a canvas or an image are read from the pixels. That is the one way of reading a word that can be wrong rather than simply missing — and you can check it yourself, because the word it read is the one shown." : {
 
     },
@@ -1258,9 +1279,6 @@
     },
     "Words you look up appear here, grouped by the day you met them." : {
       "comment" : "Drawer notice when nothing has been looked up yet"
-    },
-    "XiaolaiDict" : {
-
     },
     "XiaolaiDict needs Accessibility access" : {
       "comment" : "Lookup panel, when Accessibility has not been granted"

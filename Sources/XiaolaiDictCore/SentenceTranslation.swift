@@ -86,6 +86,9 @@ public struct SentenceTranslator: Sendable {
            TranslationCheck.isTranslation(text, of: question.sentence, into: question.target) {
             return .translated(text, by: .localModel)
         }
+        // Apple's translator cannot use the surrounding sentence to translate only a selected word.
+        // Keep the dictionary preview when Qwen cannot answer rather than label a context-free guess.
+        guard question.wordContext == nil else { return .unavailable }
         // Apple's framework needs the source named: it is built per pair.
         guard let source else { return .unavailable }
         let fallback = await apple(question.sentence, source, question.target)

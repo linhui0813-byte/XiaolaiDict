@@ -91,9 +91,14 @@ final class LocalModelCoordinator {
     /// and the download to put beside Apple's answer.
     var translationActions: TranslationActions {
         let choice = controller.choice
+        #if HUIDICT_LOCAL_BUILD
+        let target = "zh-Hans"
+        #else
+        let target = ReaderLanguage.preferred
+        #endif
         return TranslationActions(
             translate: { [access] question in await access.translator.translate(question) },
-            target: ReaderLanguage.preferred,
+            target: target,
             // The translator's own, so the control and the answer cannot disagree about whether this
             // sentence was worth asking about.
             sourceLanguage: { [access] sentence in access.translator.sourceLanguage(of: sentence) },
@@ -105,6 +110,6 @@ final class LocalModelCoordinator {
             downloadModel: { [weak self] in
                 guard let self, let size = self.controller.choice.downloadable else { return }
                 self.controller.startDownload(size)
-            })
+            }, canTranslateWords: access.isInstalled)
     }
 }

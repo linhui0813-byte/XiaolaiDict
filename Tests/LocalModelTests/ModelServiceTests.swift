@@ -681,6 +681,13 @@ struct ModelServiceTests {
         #expect(model.temperatures == [0], "the sense answer was sampled")
     }
 
+    @Test func aWordGlossChoosesItsReadingWithoutSampling() async throws {
+        let model = ScriptedModel(.answer("被拒绝"))
+        _ = try await service(model).reply(to: .translate(
+            TranslationQuestion(sentence: "refused", target: "zh-Hans", wordContext: "The application was refused.")))
+        #expect(model.temperatures == [0])
+    }
+
     /// Prose is not: at temperature 0 a small model repeats itself, so the translation and the
     /// explanation keep the backend's own sampling and are bounded by their token budget instead.
     @Test func proseKeepsItsSampling() async throws {

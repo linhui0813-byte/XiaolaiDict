@@ -144,8 +144,8 @@ extension SentenceQuestion {
     ///
     /// The sense travels only where the card **answers** with one: an ambiguous card has admitted it
     /// does not know, and telling the model its favourite would present the guess twice.
-    static func reading(_ card: LookupCard, sentence: String) -> SentenceQuestion {
-        SentenceQuestion(sentence: sentence, term: card.term, senseText: card.leadingSense?.label)
+    static func reading(_ card: LookupCard, sentence: String, target: String? = nil) -> SentenceQuestion {
+        SentenceQuestion(sentence: sentence, term: card.term, senseText: card.leadingSense?.label, target: target)
     }
 }
 

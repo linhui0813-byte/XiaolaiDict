@@ -25,6 +25,13 @@ release build uses Developer ID signing and requires the app and its services to
 ## Build HuiDict locally
 
 This fork includes the compact lookup card and an independent local app called **HuiDict**.
+With a local Qwen model installed, the card automatically shows a short Chinese translation of
+the selected word, using its surrounding sentence when available. A word-form note explains
+forms such as **refused** (past tense / past participle of **refuse**). Qwen's generated gloss is
+labelled separately from the dictionary's meanings; **More meanings** opens the dictionary details.
+Sentence translations and usage explanations in the HuiDict build also target Simplified Chinese.
+See [translation verification](docs/translation-upgrade.md) for the checked examples and a native card render.
+
 Install Xcode 27 and its Metal toolchain, then run:
 
 ```sh
@@ -43,3 +50,13 @@ public distribution. Its history and model files live in `~/Library/Application 
 
 The local build runs the Swift tests first. Tests requiring optional licensed sideloaded dictionaries
 are reported as skipped when those fixtures are not installed; the installed Apple dictionary tests run.
+
+To check word translations, grammatical readings, negation, and contextual explanations through
+the bundled Qwen service using an existing model (no download), run:
+
+```sh
+.build/HuiDict.app/Contents/MacOS/HuiDict --word-translation-report
+```
+
+If Qwen is unavailable or returns an invalid word gloss, the compact card keeps its dictionary
+meanings. Generated glosses do not become dictionary senses or saved sense confirmations.
