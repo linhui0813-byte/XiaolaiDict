@@ -333,6 +333,50 @@ struct ModelStoreTests {
         #expect(store.installed(smaller) != nil)
     }
 
+    @Test func aTransportFailureBeforeAnyByteDoesNotBlockASmallerDownload() async throws {
+        let (store, scratch) = try store()
+        defer { _ = scratch }
+        let large = LocalModelSize.large.manifest
+        let failing = MemoryTransport([:])
+        failing.failingHosts.withLock { _ = $0.insert(.modelScope) }
+        await #expect(throws: MemoryTransport.Dropped.self) {
+            try await ModelDownloader(store: store, transport: failing, freeDisk: { _ in .max }, attempts: 1)
+                .install(large)
+        }
+        #expect(!failing.requests.withLock { $0.isEmpty }, "the failure never reached the transport")
+        #expect(!FileManager.default.fileExists(atPath: store.stagingDirectory(for: large).path))
+        let smaller = Self.manifest(Self.bodies)
+        try await ModelDownloader(store: store, transport: MemoryTransport(Self.bodies),
+                                  freeDisk: { _ in smaller.totalBytes + ModelDownloader.diskMargin })
+            .install(smaller)
+        #expect(store.installed(smaller) != nil)
+    }
+
+    @Test func cancellationBeforeAnyByteRemovesTheEmptyReservation() async throws {
+        let (store, scratch) = try store()
+        defer { _ = scratch }
+        let large = LocalModelSize.large.manifest
+        let first = try #require(large.files.first)
+        let parking = ParkingTransport([first.path: Data()], parkingOn: first.path, after: 0)
+        let install = Task {
+            try await ModelDownloader(store: store, transport: parking, freeDisk: { _ in .max })
+                .install(large)
+        }
+        defer { install.cancel() }
+        for _ in 0..<500 where !parking.landed.withLock({ $0 }) {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        try #require(parking.landed.withLock { $0 }, "the transport never reached the empty partial")
+        install.cancel()
+        await #expect(throws: CancellationError.self) { _ = try await install.value }
+        #expect(!FileManager.default.fileExists(atPath: store.stagingDirectory(for: large).path))
+        let smaller = Self.manifest(Self.bodies)
+        try await ModelDownloader(store: store, transport: MemoryTransport(Self.bodies),
+                                  freeDisk: { _ in smaller.totalBytes + ModelDownloader.diskMargin })
+            .install(smaller)
+        #expect(store.installed(smaller) != nil)
+    }
+
     @Test func aDiskRefusalPreservesResumableFiles() async throws {
         let (store, scratch) = try store()
         defer { _ = scratch }
@@ -342,6 +386,8 @@ struct ModelStoreTests {
         let partial = staging.appending(path: "model.safetensors.partial")
         let bytes = Data(Self.bodies["model.safetensors"]!.prefix(40_000))
         try bytes.write(to: partial)
+        let emptyPartial = staging.appending(path: "config.json.partial")
+        try Data().write(to: emptyPartial)
         let transport = MemoryTransport(Self.bodies)
         let downloader = ModelDownloader(store: store, transport: transport, freeDisk: { _ in 1_000 })
         await #expect(throws: ModelDownloadError.insufficientDisk(
@@ -349,6 +395,7 @@ struct ModelStoreTests {
             try await downloader.install(manifest)
         }
         #expect(try Data(contentsOf: partial) == bytes)
+        #expect(!FileManager.default.fileExists(atPath: emptyPartial.path))
         #expect(transport.requests.withLock { $0.isEmpty })
     }
 

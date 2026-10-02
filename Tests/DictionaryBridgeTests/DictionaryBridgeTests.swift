@@ -431,11 +431,11 @@ struct DictionaryCapabilityTests {
     @Test(.enabled(if: InstalledDictionaryFixtures.contains("Collins COBUILD"), "Requires the optional Collins COBUILD dictionary"))
     func aSideloadedDictionaryIsKeyedByNameAndSaysSo() throws {
         let capabilities = DictionaryBridge.capabilities()
-        let collins = try #require(capabilities.first { $0.identity.name.contains("Collins COBUILD") })
+        let collins = try #require(capabilities.filter { $0.identity.name.contains("Collins COBUILD") }.oneAndOnly)
         #expect(collins.identity.identifier == nil)
         #expect(collins.identity.key == "name:\(collins.identity.name)")
         #expect(!collins.identity.hasStableEntryIDs)
-        let noad = try #require(capabilities.first { $0.identity.name.contains("New Oxford American") })
+        let noad = try #require(capabilities.filter { $0.identity.name.contains("New Oxford American") }.oneAndOnly)
         #expect(noad.identity.identifier == "com.apple.dictionary.NOAD")
         #expect(noad.identity.hasStableEntryIDs)
         #expect(noad.identity.version != nil, "no content version, so a sense key has no version to be valid in")
@@ -494,8 +494,8 @@ struct DictionaryCapabilityTests {
     /// that answers. NOAD explains in English, so it answers for an English reader and nobody else.
     @Test func theBilingualIsTheOneForAReaderOfItsOwnLanguage() throws {
         let capabilities = DictionaryBridge.capabilities()
-        let oxford = try #require(capabilities.first { $0.identity.name.contains("牛津英汉") })
-        let noad = try #require(capabilities.first { $0.identity.name.contains("New Oxford American") })
+        let oxford = try #require(capabilities.filter { $0.identity.name.contains("牛津英汉") }.oneAndOnly)
+        let noad = try #require(capabilities.filter { $0.identity.name.contains("New Oxford American") }.oneAndOnly)
 
         #expect(oxford.teachesEnglish(to: "zh-Hans-CN"))
         #expect(!oxford.teachesEnglish(to: "en"))
@@ -517,7 +517,7 @@ struct DictionaryCapabilityTests {
     @Test(.enabled(if: InstalledDictionaryFixtures.contains("Collins COBUILD"), "Requires the optional Collins COBUILD dictionary"))
     func aDictionaryThatDeclaresNothingIsClassifiedByWhatItAnswers() throws {
         let capabilities = DictionaryBridge.capabilities()
-        let collins = try #require(capabilities.first { $0.identity.name.contains("Collins COBUILD") })
+        let collins = try #require(capabilities.filter { $0.identity.name.contains("Collins COBUILD") }.oneAndOnly)
         #expect(collins.languages.isEmpty, "the premise of this test is that it declares nothing")
         #expect(collins.indexes.contains(.latin))
         #expect(!collins.indexes.contains(.han), "an English dictionary answered a Chinese probe")
@@ -527,7 +527,7 @@ struct DictionaryCapabilityTests {
     /// than a liveness check.
     @Test func theProbeSeesBothHalvesOfABilingual() throws {
         let capabilities = DictionaryBridge.capabilities()
-        let oxford = try #require(capabilities.first { $0.identity.name.contains("牛津英汉") })
+        let oxford = try #require(capabilities.filter { $0.identity.name.contains("牛津英汉") }.oneAndOnly)
         #expect(oxford.indexes.contains(.latin))
         #expect(oxford.indexes.contains(.han))
     }

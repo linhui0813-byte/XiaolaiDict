@@ -330,7 +330,10 @@ public actor ModelService {
         // generation was cancelled or failed would let every request after it skip the sizing gate
         // and load whenever, against whatever memory was free by then. The gate is asked again
         // until something has actually come back from the weights.
-        if let model, hasAnswered { return .success(model.model) }
+        // A first generation already using this instance owns its sizing decision. Reuse it
+        // while that load is in flight; rebuilding here would load another copy of the weights.
+        // Once every failed first generation ends, the gate is asked again as before.
+        if let model, hasAnswered || generating > 0 { return .success(model.model) }
         // **One reading of each.** Asking twice let the answer be about a different state from the
         // reason given for it — "not enough memory" quoting a figure from another moment.
         let available = availableMemory() ?? 0

@@ -456,6 +456,35 @@ struct ModelServiceTests {
         #expect(built.withLock { $0 } == 1)
     }
 
+    /// The first answer stays gated until both requests reach it: overlapping cold requests
+    /// must share the same build, even when the first load has consumed the available memory.
+    @Test(arguments: [false, true])
+    func overlappingFirstAnswersShareOneModel(memoryFallsAfterFirst: Bool) async throws {
+        let (store, scratch) = try Self.installedStore()
+        defer { _ = scratch }
+        let model = ScriptedModel(.answerWhenReleased("The hold is the cargo space."))
+        let built = Recorder(0)
+        let available = Recorder(40 * Self.gigabyte)
+        let service = ModelService(
+            store: store, manifests: [Self.manifest()], physicalMemory: 48 * Self.gigabyte,
+            availableMemory: { available.withLock { $0 } },
+            makeModel: { _, _ in built.withLock { $0 += 1 }; return model })
+        let question = SentenceQuestion(sentence: "The ship's hold was full.", term: "hold")
+        let first = Task { await service.reply(to: .explain(question)) }
+        defer { first.cancel(); model.release() }
+        await Self.waitUntil { model.requests.count == 1 }
+        try #require(model.requests.count == 1, "the first generation never started")
+        if memoryFallsAfterFirst { available.withLock { $0 = 0 } }
+        let second = Task { await service.reply(to: .explain(question)) }
+        defer { second.cancel() }
+        await Self.waitUntil { model.requests.count == 2 }
+        #expect(model.requests.count == 2, "the second request was refused while a model was loading")
+        #expect(built.withLock { $0 } == 1, "overlapping first requests built separate models")
+        model.release()
+        #expect(await first.value == .explanation("The hold is the cargo space."))
+        #expect(await second.value == .explanation("The hold is the cargo space."))
+    }
+
     @Test func statusSaysWhatIsInstalledAndWhetherItIsLoaded() async throws {
         let service = try service(ScriptedModel(.answer(#"{"senseNumber": 1}"#)))
         guard case .status(let before) = await service.reply(to: .status) else { Issue.record("no status"); return }

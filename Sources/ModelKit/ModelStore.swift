@@ -466,42 +466,52 @@ public struct ModelDownloader: Sendable {
         try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
 
         let total = manifest.totalBytes
-        let present: Int64
         do {
             try normalizeStaging(manifest, in: staging)
-            present = arrivedBytes(of: manifest, in: staging)
+            let present = arrivedBytes(of: manifest, in: staging)
             try checkDisk(needing: total - present, at: staging)
-        } catch {
-            // An empty refused install must not reserve this model's full size against the next
-            // download. Keep every directory with saved files so an interrupted install can resume.
-            if let contents = try? FileManager.default.contentsOfDirectory(atPath: staging.path),
-               contents.isEmpty {
-                try? FileManager.default.removeItem(at: staging)
+
+            progress(ModelDownloadProgress(received: present, total: total))
+            for file in manifest.files {
+                try Task.checkCancellation()
+                let finished = staging.appending(path: file.path)
+                if FileManager.default.fileExists(atPath: finished.path) { continue }
+                try await fetch(file, of: manifest, into: staging, total: total, progress: progress)
             }
+
+            try Task.checkCancellation()
+            try ModelStore.markerText(for: manifest).write(
+                to: staging.appending(path: ModelStore.completionMarker), atomically: true, encoding: .utf8)
+            // **Never committed without the store's lock.** A prune decides across every model at once,
+            // so it holds this for its whole run; committing inside it is what keeps a model that lands
+            // mid-prune from being read as a stray and deleted. An earlier version gave up after five
+            // seconds and committed anyway, which put the race back exactly where the lock had removed
+            // it. Waited for instead, with no deadline and with cancellation honoured: a prune holds
+            // this for the length of a directory walk, and the kernel gives a lock back when the
+            // process holding it dies, so there is nothing here to wait out for ever.
+            let held = try await Self.waitForStoreLock(store.storeLockFile())
+            defer { held.release() }
+            return try commit(staging, of: manifest, holding: held)
+        } catch {
+            removeEmptyStaging(of: manifest, in: staging)
             throw error
         }
+    }
 
-        progress(ModelDownloadProgress(received: present, total: total))
+    /// A failure before any byte arrives must not reserve the model's entire size against
+    /// other downloads. Empty partial files have nothing to resume; every saved byte is kept.
+    private func removeEmptyStaging(of manifest: ModelManifest, in staging: URL) {
         for file in manifest.files {
-            try Task.checkCancellation()
-            let finished = staging.appending(path: file.path)
-            if FileManager.default.fileExists(atPath: finished.path) { continue }
-            try await fetch(file, of: manifest, into: staging, total: total, progress: progress)
+            let partial = staging.appending(path: file.path + ModelStore.partialSuffix)
+            guard let attributes = try? FileManager.default.attributesOfItem(atPath: partial.path),
+                  attributes[.type] as? FileAttributeType == .typeRegular,
+                  (attributes[.size] as? NSNumber)?.int64Value == 0 else { continue }
+            try? FileManager.default.removeItem(at: partial)
         }
-
-        try Task.checkCancellation()
-        try ModelStore.markerText(for: manifest).write(
-            to: staging.appending(path: ModelStore.completionMarker), atomically: true, encoding: .utf8)
-        // **Never committed without the store's lock.** A prune decides across every model at once,
-        // so it holds this for its whole run; committing inside it is what keeps a model that lands
-        // mid-prune from being read as a stray and deleted. An earlier version gave up after five
-        // seconds and committed anyway, which put the race back exactly where the lock had removed
-        // it. Waited for instead, with no deadline and with cancellation honoured: a prune holds
-        // this for the length of a directory walk, and the kernel gives a lock back when the
-        // process holding it dies, so there is nothing here to wait out for ever.
-        let held = try await Self.waitForStoreLock(store.storeLockFile())
-        defer { held.release() }
-        return try commit(staging, of: manifest, holding: held)
+        if let contents = try? FileManager.default.contentsOfDirectory(atPath: staging.path),
+           contents.isEmpty {
+            try? FileManager.default.removeItem(at: staging)
+        }
     }
 
     /// What is in staging, made trustworthy before anything is counted or fetched.

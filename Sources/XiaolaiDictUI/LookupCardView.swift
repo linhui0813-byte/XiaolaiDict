@@ -569,7 +569,9 @@ public struct LookupPanelContent: View {
         // The panel has gone: nothing is waiting for this answer, and a generation running for a
         // closed panel is one the reader is paying for twice.
         .onDisappear { translating?.cancel(); explaining?.cancel() }
-        .onChange(of: showing) { clearPanes() }
+        // Observe the displayed entry: nil and an explicit opening index show the same card,
+        // while a late primary can change that card without changing the reader's selection.
+        .onChange(of: entry.map { PanelSelection.identity(of: $0) }) { clearPanes() }
         .onChange(of: presentation.sense) {
             if let entry, !selection.hasChosen(in: entry) { clearPanes() }
         }
