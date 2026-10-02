@@ -288,6 +288,9 @@
     "Choose a dictionary that marks senses…" : {
 
     },
+    "Choose this meaning" : {
+
+    },
     "Choose…" : {
 
     },
@@ -1125,6 +1128,9 @@
     "The quick brown fox jumps over the lazy dog." : {
       "comment" : "Type specimen in the Reading pane; any sentence that shows off the reader's script will do"
     },
+    "The reading history could not be read." : {
+
+    },
     "The sense here is a guess — not confirmed" : {
 
     },
@@ -1154,6 +1160,9 @@
     },
     "This dictionary does not mark senses, so none can be pointed at here." : {
       "comment" : "Shown where a dictionary's entries carry no sense structure at all"
+    },
+    "This meaning cannot be identified by the dictionary, so it cannot be chosen here." : {
+
     },
     "This pane is not connected to the dictionary service." : {
 

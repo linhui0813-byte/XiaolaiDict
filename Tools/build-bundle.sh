@@ -423,7 +423,7 @@ verify_required_files() {
     # because that is the thing being shipped.
     for present in $(cd "$bundle/$MODEL_XPC_PATH/Contents/Resources" 2>/dev/null \
         && find . -maxdepth 1 -name '*.bundle' -exec basename {} \; | sort); do
-        case " ${BUNDLE_LIST[*]} " in
+        case " ${BUNDLE_LIST[*]+${BUNDLE_LIST[*]}} " in
             *" $present "*) ;;
             *) echo "the model service carries $present, which this build did not produce"; return 1 ;;
         esac

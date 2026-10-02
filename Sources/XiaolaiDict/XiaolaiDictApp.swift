@@ -105,7 +105,8 @@ final class XiaolaiDictApp: NSObject, NSApplicationDelegate {
                 return .entries(try await opening.value.recentLookups(
                     since: since, limit: HistoryDrawerController.cardLimit, studying: studying))
             } catch {
-                return .unavailable("\(error)")
+                self?.log.error("drawer: could not read history: \(error)")
+                return .unavailable(String(localized: "The reading history could not be read."))
             }
         }
         // Only reached once the reader's grace period has run out, so by the time this fires they

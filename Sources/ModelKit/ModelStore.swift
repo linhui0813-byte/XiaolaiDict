@@ -465,10 +465,21 @@ public struct ModelDownloader: Sendable {
         // A prune can see the model directory only once its installation lock is held.
         try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
 
-        try normalizeStaging(manifest, in: staging)
-        let present = arrivedBytes(of: manifest, in: staging)
         let total = manifest.totalBytes
-        try checkDisk(needing: total - present, at: staging)
+        let present: Int64
+        do {
+            try normalizeStaging(manifest, in: staging)
+            present = arrivedBytes(of: manifest, in: staging)
+            try checkDisk(needing: total - present, at: staging)
+        } catch {
+            // An empty refused install must not reserve this model's full size against the next
+            // download. Keep every directory with saved files so an interrupted install can resume.
+            if let contents = try? FileManager.default.contentsOfDirectory(atPath: staging.path),
+               contents.isEmpty {
+                try? FileManager.default.removeItem(at: staging)
+            }
+            throw error
+        }
 
         progress(ModelDownloadProgress(received: present, total: total))
         for file in manifest.files {

@@ -104,6 +104,47 @@ class LocalSigningTests(unittest.TestCase):
                     SIGNING.check_update(candidate, "A" * 40, Path(scratch) / "missing.app")
 
 
+class BundleResourceVerificationTests(unittest.TestCase):
+    def test_an_empty_build_resource_list_reports_the_unexpected_bundle(self):
+        source = (SIGNING.REPO / "Tools/build-bundle.sh").read_text()
+        function = re.search(r"(?ms)^verify_required_files\(\).*?^}\n", source)
+        self.assertIsNotNone(function)
+        with tempfile.TemporaryDirectory() as scratch:
+            bundle = Path(scratch) / "Fixture.app"
+            xpc = "Contents/XPCServices/Dictionary.xpc"
+            model = "Contents/XPCServices/Model.xpc"
+            for relative in ["Contents/MacOS/Fixture", f"{xpc}/Contents/MacOS/Dictionary",
+                             f"{model}/Contents/MacOS/Model"]:
+                file = bundle / relative
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_text("fixture")
+                file.chmod(0o755)
+            for relative in ["Contents/Info.plist", "Contents/Resources/Assets.car",
+                             "Contents/Resources/MenuBarIcon.svg", "Contents/Resources/Notices.txt",
+                             f"{xpc}/Contents/Info.plist", f"{model}/Contents/Info.plist",
+                             f"{model}/Contents/Resources/Unexpected.bundle/default.metallib"]:
+                file = bundle / relative
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_text("fixture")
+            commands = r'''
+set -euo pipefail
+APP_NAME=Fixture SERVICE=Dictionary MODEL_SERVICE=Model NOTICES=Notices.txt
+XPC_PATH=Contents/XPCServices/Dictionary.xpc
+MODEL_XPC_PATH=Contents/XPCServices/Model.xpc
+METALLIB_PATH=$MODEL_XPC_PATH/Contents/Resources/Unexpected.bundle/default.metallib
+BUNDLE_LIST=()
+resolve_products() { BUNDLE_LIST=(); }
+catalog_languages() { :; }
+'''
+            result = subprocess.run(
+                ["/bin/bash", "-c", commands + function.group(0) + '\nverify_required_files "$1"',
+                 "bundle-fixture", str(bundle)], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("the model service carries Unexpected.bundle, which this build did not produce",
+                          result.stdout)
+            self.assertNotIn("unbound variable", result.stderr)
+
+
 class SigningRetryTests(unittest.TestCase):
     def sign(self, stamp, succeeds_on=0):
         source = (SIGNING.REPO / "Tools/build-bundle.sh").read_text()

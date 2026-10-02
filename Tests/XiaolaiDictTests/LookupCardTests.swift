@@ -41,6 +41,26 @@ struct LookupCardTests {
         #expect(chosen.alternatives.allSatisfy { $0.key != "m_en_gbus0362750.005" })
     }
 
+    @Test @MainActor func choosingRequiresAnIdentifiableEntryAndSense() throws {
+        let sense = try #require(EntryPresentation(entry: entry, mark: nil, met: []).senses.first)
+        let encounter = try #require(LookupPanelContent.choice(sense, in: entry))
+        #expect(encounter.senseKey == sense.key)
+        #expect(encounter.chosenBy == .reader)
+
+        let keyless = SensePresentation(
+            key: nil, ordinal: sense.ordinal, partOfSpeech: sense.partOfSpeech, label: sense.label,
+            keyKind: .none, standing: sense.standing, metBefore: false)
+        #expect(LookupPanelContent.choice(keyless, in: entry) == nil)
+
+        let id = try #require(entry.entryID)
+        let markup = entry.html.replacingOccurrences(of: "id=\"\(id)\"", with: "")
+        let unnamed = DictionaryEntry(
+            dictionary: entry.dictionary, headword: entry.headword, lookedUp: "fine", html: markup,
+            document: EntryDocument.parse(markup))
+        #expect(unnamed.entryKey == nil)
+        #expect(LookupPanelContent.choice(sense, in: unnamed) == nil)
+    }
+
     /// XiaolaiDict's guess is drawn as a guess. This is `chosen_by` reaching the surface, and it is the
     /// difference between a card the reader can check and one they can only believe.
     @Test func theAppsGuessIsMarkedAsAHypothesis() {
@@ -85,6 +105,31 @@ struct LookupCardTests {
             return
         }
         #expect(chosen.partOfSpeech == sense.partOfSpeech)
+    }
+}
+
+/// Expanding a fallback result keeps the warning that its captured word may be inaccurate.
+@MainActor
+struct ScreenReadingWarningLayoutTests {
+    @Test(arguments: [LookupOutcome.notFound(serviceFailure: nil),
+                      .plainText("A fallback definition", serviceFailure: "offline")])
+    func expandedFallbacksRetainTheScreenReadingWarning(_ outcome: LookupOutcome) throws {
+        let capture = try #require(CaptureQuality(
+            source: .opticalRecognition, confidence: 0.5, context: .missing))
+        let presentation = LookupPresentation(
+            request: 1, term: "fine", lemma: Lemma(text: "fine", basis: .tagger), source: nil,
+            capture: capture, outcome: outcome)
+        func height(warning: Bool) -> CGFloat {
+            var options = CardOptions()
+            options.warnsAboutScreenReading = warning
+            let view = NSHostingView(rootView: LookupPanelContent(
+                presentation: presentation, detailsInitiallyExpanded: true)
+                .environment(\.cardOptions, options))
+            view.layoutSubtreeIfNeeded()
+            return view.fittingSize.height
+        }
+        #expect(height(warning: true) > height(warning: false),
+                "expanding a fallback result dropped the screen-reading warning")
     }
 }
 

@@ -312,6 +312,44 @@ struct ModelStoreTests {
             try await downloader.install(manifest)
         }
         #expect(transport.requests.withLock { $0.isEmpty })
+        #expect(!FileManager.default.fileExists(atPath: store.stagingDirectory(for: manifest).path),
+                "a refused empty install kept reserving disk space")
+    }
+
+    @Test func aRefusedLargeModelDoesNotBlockASmallerDownload() async throws {
+        let (store, scratch) = try store()
+        defer { _ = scratch }
+        let large = LocalModelSize.large.manifest
+        let smaller = Self.manifest(Self.bodies)
+        let available = smaller.totalBytes + ModelDownloader.diskMargin
+        let transport = MemoryTransport(Self.bodies)
+        let downloader = ModelDownloader(store: store, transport: transport, freeDisk: { _ in available })
+        await #expect(throws: ModelDownloadError.insufficientDisk(
+            needed: large.totalBytes + ModelDownloader.diskMargin, available: available)) {
+            try await downloader.install(large)
+        }
+        #expect(transport.requests.withLock { $0.isEmpty })
+        try await downloader.install(smaller)
+        #expect(store.installed(smaller) != nil)
+    }
+
+    @Test func aDiskRefusalPreservesResumableFiles() async throws {
+        let (store, scratch) = try store()
+        defer { _ = scratch }
+        let manifest = Self.manifest(Self.bodies)
+        let staging = store.stagingDirectory(for: manifest)
+        try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
+        let partial = staging.appending(path: "model.safetensors.partial")
+        let bytes = Data(Self.bodies["model.safetensors"]!.prefix(40_000))
+        try bytes.write(to: partial)
+        let transport = MemoryTransport(Self.bodies)
+        let downloader = ModelDownloader(store: store, transport: transport, freeDisk: { _ in 1_000 })
+        await #expect(throws: ModelDownloadError.insufficientDisk(
+            needed: manifest.totalBytes - Int64(bytes.count) + ModelDownloader.diskMargin, available: 1_000)) {
+            try await downloader.install(manifest)
+        }
+        #expect(try Data(contentsOf: partial) == bytes)
+        #expect(transport.requests.withLock { $0.isEmpty })
     }
 
     /// What already arrived is not counted against the disk: the check is for what is still to come.
@@ -415,6 +453,8 @@ struct ModelStoreTests {
                 .install(Self.manifest(Self.bodies))
         }
         #expect(transport.requests.withLock { $0.isEmpty })
+        #expect(!FileManager.default.fileExists(
+            atPath: store.stagingDirectory(for: Self.manifest(Self.bodies)).path))
     }
 
     /// **One install of a model at a time.** The app's board and the report share a store, and two

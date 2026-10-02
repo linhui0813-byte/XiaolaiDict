@@ -18,6 +18,8 @@ public struct LookupCardView: View {
     /// most valuable thing they can do here — it is how a wrong guess gets corrected and how the
     /// ledger learns something it can stand behind.
     public var onChoose: ((SensePresentation) -> Void)?
+    /// The same encounter check used by the action, so an unrecordable meaning is visibly disabled.
+    public var canChoose: (SensePresentation) -> Bool
     /// **Agreeing with the card's own guess.** Non-nil only where the sense on screen is a hypothesis
     /// *and* can actually be recorded — the panel works that out, because only it holds the entry the
     /// encounter is built from, and it passes nothing where there is nothing to write. So the control
@@ -34,10 +36,12 @@ public struct LookupCardView: View {
 
     public init(
         card: LookupCard, onChoose: ((SensePresentation) -> Void)? = nil,
-        onConfirm: (() -> Void)? = nil, showsAllMeanings: Bool = false
+        onConfirm: (() -> Void)? = nil, showsAllMeanings: Bool = false,
+        canChoose: @escaping (SensePresentation) -> Bool = { $0.key != nil }
     ) {
         self.card = card
         self.onChoose = onChoose
+        self.canChoose = canChoose
         self.onConfirm = onConfirm
         self.showsAllMeanings = showsAllMeanings
         _showingAlternatives = State(initialValue: showsAllMeanings || card.opensAlternatives)
@@ -369,7 +373,8 @@ public struct LookupCardView: View {
     /// Tapping one promotes it. That is the correction path for the 17% the fallback selector gets
     /// confidently wrong, and it is a single click by design.
     private func alternative(_ sense: SensePresentation) -> some View {
-        Button { onChoose?(sense) } label: {
+        let enabled = onChoose != nil && canChoose(sense)
+        return Button { onChoose?(sense) } label: {
             HStack(alignment: .firstTextBaseline, spacing: scale.space.inline) {
                 Text(sense.ordinal, format: .number)
                     .font(.system(size: scale.text.small).monospacedDigit())
@@ -391,6 +396,10 @@ public struct LookupCardView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(!enabled)
+        .help(enabled
+            ? Text("Choose this meaning")
+            : Text("This meaning cannot be identified by the dictionary, so it cannot be chosen here."))
     }
 }
 
@@ -657,6 +666,7 @@ public struct LookupPanelContent: View {
             WaitingView(detail: waiting)
         case .notFound:
             VStack(alignment: .leading, spacing: scale.space.stack) {
+                captureCaveat
                 LookupCardView(card: cardWithoutAnEntry(.absent))
                 // **A miss and an unanswered question are not the same result.** Both drew "No
                 // entry … in your dictionaries", which is a confirmed absence — so a crashed or
@@ -666,6 +676,7 @@ public struct LookupPanelContent: View {
             }
         case .plainText(let text, _):
             VStack(alignment: .leading, spacing: scale.space.stack) {
+                captureCaveat
                 let card = cardWithoutAnEntry(.prose(text))
                 LookupCardView(card: card)
                 if PanelCaveats.serviceUnanswered(presentation.outcome) { serviceCaveat }
@@ -699,7 +710,8 @@ public struct LookupPanelContent: View {
                         // condition for drawing it.
                         onConfirm: confirmable(entry).map { encounter in
                             { confirm(encounter, in: entry) }
-                        }, showsAllMeanings: true)
+                        }, showsAllMeanings: true,
+                        canChoose: { Self.choice($0, in: entry) != nil })
                     .id(PanelSelection.identity(of: entry))
                     // Only beside the card it was made for. A different dictionary, or a sense that
                     // arrived after it was asked, is a different card.
@@ -814,12 +826,16 @@ public struct LookupPanelContent: View {
     /// id, or a dictionary whose senses carry none, gives a tap that would be a confirmation with
     /// nothing behind it.
     private func choose(_ sense: SensePresentation, in entry: DictionaryEntry) {
-        guard let key = sense.key,
-              let encounter = SenseEncounter.of(entry, senseKey: key, chosenBy: .reader, at: .now)
+        guard let encounter = Self.choice(sense, in: entry), let key = encounter.senseKey
         else { return }
         studySense(encounter)
         selection.choose(key, in: entry)
         clearPanes()
+    }
+
+    static func choice(_ sense: SensePresentation, in entry: DictionaryEntry) -> SenseEncounter? {
+        guard let key = sense.key else { return nil }
+        return SenseEncounter.of(entry, senseKey: key, chosenBy: .reader, at: .now)
     }
 
     /// **What confirming the card's own guess would record, or nil where nothing can be.**
