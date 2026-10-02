@@ -53,7 +53,11 @@ struct XiaolaiDictMenu: View {
             }
         }
 
-        Button(app.drawerIsVisible ? "Hide Reading History" : "Reading History") { app.toggleHistory() }
+        if app.drawerIsVisible {
+            Button("Hide Reading History") { app.toggleHistory() }
+        } else {
+            Button("Reading History") { app.toggleHistory() }
+        }
         // Above the dictionary picker, because reviewing is what the reader came to do and choosing
         // a dictionary is a setting they touch once.
         Button("Review…") { app.showReview() }
@@ -86,8 +90,11 @@ struct XiaolaiDictMenu: View {
     private var studyFrom: some View {
         Menu("Study From") {
             Button { app.dictionary.choose(nil) } label: {
-                Text(app.dictionary.chosen == nil
-                     ? "\u{2713} First that marks senses" : "First that marks senses")
+                if app.dictionary.chosen == nil {
+                    Text("✓ First that marks senses")
+                } else {
+                    Text("First that marks senses")
+                }
             }
             Divider()
             if let dictionaries = app.dictionary.enabled {

@@ -63,6 +63,7 @@ final class XiaolaiDictApp: NSObject, NSApplicationDelegate {
         // so there is no `lazy` to be had — and a per-use load would be the mouse-move decode
         // this property exists to avoid.
         hover = HoverControl(defaults: defaults)
+        appearance = Appearance(store: AppearanceStore(defaults: defaults))
         // **The suite the app was given, not `.standard`.** Built inline against the real
         // preferences while `init(defaults:)` existed for exactly this reason, so every test that
         // touched the shortcut rewrote the reader's own — the objection this project makes to
@@ -93,7 +94,7 @@ final class XiaolaiDictApp: NSObject, NSApplicationDelegate {
     /// failure rather than an empty drawer — the two must not look the same.
     private func makeDrawer() -> HistoryDrawerController {
         let drawer = HistoryDrawerController { [weak self] in
-            guard let opening = self?.recorder.store else { return .unavailable("The ledger is not open yet.") }
+            guard let opening = self?.recorder.store else { return .unavailable(String(localized: "The ledger is not open yet.")) }
             // **The same setting the hover gate asks, read at open time.** A reader who widens the
             // scripts they study sees the words already in the ledger the next time they open the
             // drawer — the filter is on the reading, not on the recording, so nothing was thrown
@@ -441,7 +442,7 @@ final class XiaolaiDictApp: NSObject, NSApplicationDelegate {
     /// Held so the app can tell when the reader has actually seen the board: its becoming key is
     /// that moment, and it is what writes `SetupPresentationStore`'s flag.
     @ObservationIgnored weak var setupWindow: NSWindow? {
-        didSet { watchSetupWindow() }
+        didSet { if setupWindow !== oldValue { watchSetupWindow() } }
     }
     @ObservationIgnored private var setupKeyObserver: NSObjectProtocol?
 
@@ -505,7 +506,7 @@ final class XiaolaiDictApp: NSObject, NSApplicationDelegate {
     /// The reader's text size, and the scale every surface is drawn from. Owned here because it
     /// outlives any one window: the drawer, the panel and a pinned note all read the same one, and
     /// changing it has to move all of them at once.
-    let appearance = Appearance()
+    let appearance: Appearance
     var drawerPlacement: CGRect? { drawer.placement }
     var drawerIsDrawn: Bool { drawer.isDrawnOnScreen }
     var drawerWindowFrame: CGRect { drawer.windowFrame }

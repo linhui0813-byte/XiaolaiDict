@@ -2,6 +2,7 @@
 import importlib.util
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -16,7 +17,8 @@ SPEC.loader.exec_module(SIGNING)
 class LocalSigningTests(unittest.TestCase):
     def test_build_stops_before_publication_when_the_signer_is_missing(self):
         with tempfile.TemporaryDirectory() as scratch:
-            environment = os.environ | {"HUIDICT_LOCAL_BUILD": "1", "HUIDICT_SIGNING_DIR": scratch}
+            environment = os.environ | {"HUIDICT_LOCAL_BUILD": "1", "HUIDICT_SIGNING_DIR": scratch,
+                                        "XIAOLAIDICT_BUILD_NUMBER": ""}
             result = subprocess.run(["bash", str(SIGNING.REPO / "Tools/build-bundle.sh"), "build"],
                                     env=environment, capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
@@ -100,3 +102,57 @@ class LocalSigningTests(unittest.TestCase):
             with patch.object(SIGNING, "verify", side_effect=RuntimeError("invalid candidate")):
                 with self.assertRaisesRegex(RuntimeError, "invalid candidate"):
                     SIGNING.check_update(candidate, "A" * 40, Path(scratch) / "missing.app")
+
+
+class SigningRetryTests(unittest.TestCase):
+    def sign(self, stamp, succeeds_on=0):
+        source = (SIGNING.REPO / "Tools/build-bundle.sh").read_text()
+        function = re.search(r"(?ms)^sign_part\(\).*?^}\n", source)
+        self.assertIsNotNone(function, "the real signing function was not found")
+        # Execute the production function with fake commands: no credentials, network, signing
+        # changes or actual backoff waits occur in these tests.
+        commands = r'''
+set -euo pipefail
+readonly LOCAL_BUILD=1 LOCAL_KEYCHAIN=fixture-keychain XIAOLAIDICT_SIGN_ID=fixture-identity SIGN_TRIES=5
+codesign() {
+    local count=0
+    [ ! -f "$TEST_SIGN_CALLS" ] || count=$(cat "$TEST_SIGN_CALLS")
+    count=$((count + 1))
+    printf '%s' "$count" > "$TEST_SIGN_CALLS"
+    if (( count == TEST_SIGN_SUCCEEDS_ON )); then return 0; fi
+    echo 'fixture signing failure' >&2
+    return 37
+}
+sleep() { printf '%s\n' "$1" >> "$TEST_SIGN_SLEEPS"; }
+note() { printf '%s\n' "$*"; }
+'''
+        with tempfile.TemporaryDirectory() as scratch:
+            calls = Path(scratch) / "calls"
+            sleeps = Path(scratch) / "sleeps"
+            environment = os.environ | {"TEST_SIGN_CALLS": str(calls), "TEST_SIGN_SLEEPS": str(sleeps),
+                                        "TEST_SIGN_SUCCEEDS_ON": str(succeeds_on)}
+            result = subprocess.run(["/bin/bash", "-c", commands + function.group(0) + '\nsign_part "$1" "$2"',
+                                     "signing-fixture", stamp, "Fixture.app"],
+                                    env=environment, capture_output=True, text=True)
+            return result, int(calls.read_text()), sleeps.read_text().splitlines() if sleeps.exists() else []
+
+    def test_offline_signing_fails_once_and_keeps_its_diagnostic(self):
+        result, calls, sleeps = self.sign("--timestamp=none")
+        self.assertEqual(result.returncode, 37)
+        self.assertEqual(calls, 1)
+        self.assertEqual(sleeps, [])
+        self.assertIn("fixture signing failure", result.stderr)
+        self.assertNotIn("retrying", result.stdout)
+
+    def test_timestamp_signing_retains_bounded_retries_and_each_diagnostic(self):
+        result, calls, sleeps = self.sign("--timestamp")
+        self.assertEqual(result.returncode, 37)
+        self.assertEqual(calls, 5)
+        self.assertEqual(sleeps, ["2", "4", "6", "8"])
+        self.assertEqual(result.stderr.count("fixture signing failure"), 5)
+
+    def test_a_transient_timestamp_failure_can_succeed_on_the_next_attempt(self):
+        result, calls, sleeps = self.sign("--timestamp", succeeds_on=2)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(calls, 2)
+        self.assertEqual(sleeps, ["2"])

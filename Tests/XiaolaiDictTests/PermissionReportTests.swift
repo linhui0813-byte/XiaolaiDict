@@ -5,6 +5,26 @@ import XiaolaiDictUI
 
 @MainActor
 struct PermissionReportTests {
+    @Test func anUnreadablePermissionDoesNotClaimItIsOff() {
+        let report = PermissionsReport(states: Permission.allCases.map {
+            PermissionState(permission: $0, found: .couldNotTell)
+        })
+        #expect(!report.allGranted)
+        #expect(report.menuWarning == nil)
+    }
+
+    @Test(arguments: Permission.allCases)
+    func onlyAnExplicitRefusalIsNamedInAMixedReport(permission: Permission) throws {
+        let report = PermissionsReport(states: Permission.allCases.map {
+            PermissionState(permission: $0, found: $0 == permission ? .declined : .couldNotTell)
+        })
+        let warning = try #require(report.menuWarning)
+        #expect(warning.contains(permission.name))
+        for unknown in Permission.allCases where unknown != permission {
+            #expect(!warning.contains(unknown.name))
+        }
+    }
+
     @Test func commandAcceptsNoExtraArguments() {
         #expect(LaunchArguments.parse(["--permission-report"]) == .success(.permissionReport))
         #expect(throws: (any Error).self) {

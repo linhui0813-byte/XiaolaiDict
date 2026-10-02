@@ -31,18 +31,17 @@ final class LocalModelCoordinator {
         controller = LocalModelController(
             defaults: defaults, store: store, physicalMemory: physicalMemory,
             transport: transport, probe: probe)
-        access = LocalModelAccess(client: client, store: store)
+        access = LocalModelAccess(client: client, store: store, physicalMemory: physicalMemory)
         // A new model is answered from only once the service holding the old one has gone.
         //
         // **Ready is still published if it will not go.** The model is on disk and is what the next
         // service loads; refusing to say so would leave the row unfinished for as long as a stuck
         // process lives, which is worse than a few answers from the model being replaced. The
         // failure is recorded rather than swallowed.
+        controller.onModelArrived = { [access] in access.quarantine.hold() }
         controller.onInstalled = { [access, log] in
-            // **Held for the length of the unload**, so nothing is asked of the old process while
-            // it is being ended — the window `refresh()` opens by publishing "ready" without
-            // awaiting this. Released only where the process was *seen* to go.
-            access.quarantine.hold()
+            // The synchronous arrival hook already holds the local rung. Release it only when
+            // the previous process was seen to end.
             if await access.client.unload() {
                 access.quarantine.lift()
                 log.notice("model: the service holding the previous model has ended")

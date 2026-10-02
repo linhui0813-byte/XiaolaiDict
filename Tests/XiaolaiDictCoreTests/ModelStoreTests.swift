@@ -434,6 +434,121 @@ struct ModelStoreTests {
         }
     }
 
+    @Test func aRemovalRefusesAnInstallationAndPreservesItsStagedBytes() throws {
+        let (store, scratch) = try store()
+        defer { _ = scratch }
+        let manifest = Self.manifest(Self.bodies)
+        let staging = store.stagingDirectory(for: manifest)
+        try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
+        let partial = staging.appending(path: "config.json.partial")
+        let bytes = Data("a download in progress".utf8)
+        try bytes.write(to: partial)
+        let held = try #require(InstallLock(store.lockFile(for: manifest)))
+        #expect(throws: ModelDownloadError.alreadyInstalling(identifier: manifest.identifier)) {
+            try store.remove(manifest)
+        }
+        #expect(try Data(contentsOf: partial) == bytes)
+        held.release()
+        try store.remove(manifest)
+        #expect(!FileManager.default.fileExists(atPath: staging.path))
+    }
+
+    @Test func aRemovalDoesNotDeleteWhileTheStoreIsLocked() throws {
+        let (store, scratch) = try store()
+        defer { _ = scratch }
+        let manifest = Self.manifest(Self.bodies)
+        let staging = store.stagingDirectory(for: manifest)
+        try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
+        let held = try #require(InstallLock(store.storeLockFile()))
+        defer { held.release() }
+        #expect(throws: ModelDownloadError.couldNotDiscard(path: manifest.identifier, reason: "the model store is busy")) {
+            try store.remove(manifest)
+        }
+        #expect(FileManager.default.fileExists(atPath: staging.path))
+    }
+
+    @Test func aRemovalNeverRecreatesAMissingStore() throws {
+        let scratch = TemporaryDirectory(named: "huidict-missing-removal")
+        let store = ModelStore(root: scratch.url.appending(path: "gone"))
+        try store.remove(Self.manifest(Self.bodies))
+        #expect(!FileManager.default.fileExists(atPath: store.root.path))
+    }
+
+    @Test func aRefusedInstallNeverExposesAnUnlockedModelStagingDirectory() async throws {
+        let (store, scratch) = try store()
+        defer { _ = scratch }
+        let manifest = Self.manifest(Self.bodies)
+        try FileManager.default.createDirectory(
+            at: store.lockFile(for: manifest).deletingLastPathComponent(), withIntermediateDirectories: true)
+        let held = try #require(InstallLock(store.lockFile(for: manifest)))
+        defer { held.release() }
+        await #expect(throws: ModelDownloadError.alreadyInstalling(identifier: manifest.identifier)) {
+            try await ModelDownloader(store: store, transport: MemoryTransport(Self.bodies), freeDisk: { _ in .max })
+                .install(manifest)
+        }
+        #expect(!FileManager.default.fileExists(atPath: store.stagingDirectory(for: manifest).path))
+    }
+
+    @Test func transientProbeContentionDoesNotRefuseAnInstall() async throws {
+        let (store, scratch) = try store()
+        defer { _ = scratch }
+        let file = store.storeLockFile()
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let probe = try #require(InstallLock(file))
+        let waits = Recorder<Int>(0)
+        let held = try #require(try await ModelDownloader.takeInstallLock(file) {
+            waits.withLock { $0 += 1 }
+            probe.release()
+        })
+        defer { held.release() }
+        #expect(waits.withLock { $0 } == 1)
+        #expect(InstallLock(file) == nil, "the returned install lock was not exclusive")
+    }
+
+    @Test func transientProbeContentionDoesNotRefuseARemovalLock() throws {
+        let (store, scratch) = try store()
+        defer { _ = scratch }
+        let file = store.storeLockFile()
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let probe = try #require(InstallLock(file))
+        var waits = 0
+        let held = try #require(ModelStore.takeRemovalLock(file) {
+            waits += 1
+            probe.release()
+        })
+        defer { held.release() }
+        #expect(waits == 1)
+        #expect(InstallLock(file) == nil)
+    }
+
+    @Test func actualRemovalContentionRemainsBounded() throws {
+        let (store, scratch) = try store()
+        defer { _ = scratch }
+        let file = store.storeLockFile()
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let held = try #require(InstallLock(file))
+        defer { held.release() }
+        var waits = 0
+        #expect(ModelStore.takeRemovalLock(file) { waits += 1 } == nil)
+        #expect(waits == 4)
+    }
+
+    @Test func actualInstallContentionRemainsBoundedAndCancellable() async throws {
+        let (store, scratch) = try store()
+        defer { _ = scratch }
+        let file = store.storeLockFile()
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let held = try #require(InstallLock(file))
+        defer { held.release() }
+        let waits = Recorder<Int>(0)
+        let refused = try await ModelDownloader.takeInstallLock(file) { waits.withLock { $0 += 1 } }
+        #expect(refused == nil)
+        #expect(waits.withLock { $0 } == 4)
+        await #expect(throws: CancellationError.self) {
+            _ = try await ModelDownloader.takeInstallLock(file) { throw CancellationError() }
+        }
+    }
+
     /// Progress is what is on disk. A host that ignores the range and restarts a file must not read
     /// as bytes gained — the download would report itself finished while short.
     @Test func aRestartedFileDoesNotCountItsDiscardedFront() async throws {
@@ -457,6 +572,25 @@ struct ModelStoreTests {
         // before it — `aHostThatIgnoresTheRangeStartsTheFileAgain` asserts that drop directly, at
         // the writer, where the truncation actually happens.
         #expect(received.allSatisfy { $0 <= manifest.totalBytes }, "progress counted a discarded front")
+    }
+
+    @Test func aCleanShortRestartIsRetriedFromItsNewSmallerOffset() async throws {
+        let (store, scratch) = try store()
+        defer { _ = scratch }
+        let manifest = Self.manifest(Self.bodies)
+        let transport = MemoryTransport(Self.bodies)
+        transport.interruptions.withLock { $0["model.safetensors"] = 40_000 }
+        await #expect(throws: MemoryTransport.Dropped.self) {
+            try await ModelDownloader(store: store, transport: transport, freeDisk: { _ in .max }, attempts: 1)
+                .install(manifest)
+        }
+        transport.restarts.withLock { _ = $0.insert("model.safetensors") }
+        transport.shortfalls.withLock { $0["model.safetensors"] = 10_000 }
+        let directory = try await ModelDownloader(store: store, transport: transport,
+            freeDisk: { _ in .max }, retryPause: .zero).install(manifest)
+        let offsets = transport.requests.withLock { $0.filter { $0.0 == "model.safetensors" }.map(\.1) }
+        #expect(offsets == [0, 40_000, 10_000])
+        #expect(try Data(contentsOf: directory.appending(path: "model.safetensors")) == Self.bodies["model.safetensors"])
     }
 
     /// **A host that ends a range response early has not failed**, so nothing throws — and the

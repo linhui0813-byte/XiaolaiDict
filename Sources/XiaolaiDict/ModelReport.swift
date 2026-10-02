@@ -98,6 +98,7 @@ enum ModelReport {
         // anything, and the run stops if it will not go: numbers from the wrong process are worse
         // than no numbers.
         let ended = await client.unload()
+        try Task.checkCancellation()
         report["endedTheRunningService"] = ended
         guard ended else {
             report["error"] = "a model service was already running and would not end, so nothing here would be about this build"

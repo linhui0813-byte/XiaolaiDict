@@ -266,10 +266,12 @@ public struct PermissionsReport: Equatable, Sendable {
     /// the reader to a window to discover what a sentence could have told them is the failure this
     /// whole probe exists to avoid.
     public var menuWarning: String? {
-        switch missing.count {
+        // An unreadable probe is not evidence that a permission is off.
+        let declined = states.filter { $0.found == .declined }
+        return switch declined.count {
         case 0: nil
         case 1:
-            switch missing[0].permission {
+            switch declined[0].permission {
             case .accessibility:
                 String(localized: "Accessibility is off — your selection cannot be read",
                        comment: "Menu warning when only Accessibility is missing")
@@ -278,7 +280,7 @@ public struct PermissionsReport: Equatable, Sendable {
                        comment: "Menu warning when only Screen Recording is missing")
             }
         default:
-            String(localized: "\(missing.count) permissions are off — selections and the screen cannot be read",
+            String(localized: "\(declined.count) permissions are off — selections and the screen cannot be read",
                    comment: "Menu warning when more than one permission is missing")
         }
     }

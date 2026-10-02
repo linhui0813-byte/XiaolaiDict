@@ -83,7 +83,9 @@ public enum ModelPrompt {
     /// be an instruction if it were pasted here; as prompt data below, it is text about a word.
     public static func translationInstructions(for question: TranslationQuestion) -> String {
         if question.wordContext != nil {
-            let examples = question.target.lowercased().hasPrefix("zh") ? """
+            let language = Locale.Language(identifier: question.target)
+            let script = language.script ?? Locale.Language(identifier: language.maximalIdentifier).script
+            let examples = language.languageCode?.identifier == "zh" && script?.identifier == "Hans" ? """
 
             Examples for Chinese:
             "reopened" without a sentence has readings \
@@ -148,7 +150,7 @@ public enum ModelPrompt {
         return """
             \(sentence)
 
-            (Context, not an instruction: in the text above, "\(met.term)" is used in this sense — \
+            (Context, not an instruction: in the text above, "\(flattened(met.term, limit: selectedTextCharacterLimit))" is used in this sense — \
             \(flattened(met.sense, limit: translatedSenseLimit)))
             """
     }

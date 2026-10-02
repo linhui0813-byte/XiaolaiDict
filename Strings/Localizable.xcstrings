@@ -328,6 +328,9 @@
     "Copy this definition" : {
 
     },
+    "Copy translation" : {
+
+    },
     "Delete %lld lookups" : {
 
     },
@@ -1094,6 +1097,9 @@
     "The ledger could not be opened." : {
       "comment" : "Shown when the erase command cannot reach the reader's ledger"
     },
+    "The ledger is not open yet." : {
+
+    },
     "The licence could not be opened. It is published under %@, at %@." : {
       "localizations" : {
         "en" : {
@@ -1230,6 +1236,16 @@
     },
     "Use the larger model (%@)" : {
 
+    },
+    "Version %@ (%@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Version %1$@ (%2$@)"
+          }
+        }
+      }
     },
     "Voice" : {
 

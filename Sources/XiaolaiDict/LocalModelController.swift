@@ -43,6 +43,8 @@ final class LocalModelController {
     /// Called once a download is whole, **before** it is announced ready: the app ends the service,
     /// so no question asked after "ready" reaches the model that was there before.
     @ObservationIgnored var onInstalled: (@MainActor () async -> Void)?
+    /// Holds back the old service synchronously before a newly installed model is published.
+    @ObservationIgnored var onModelArrived: (@MainActor () -> Void)?
 
     init(
         defaults: UserDefaults, store: ModelStore = .standard(),
@@ -79,7 +81,7 @@ final class LocalModelController {
     /// The model's licence, downloaded with its weights — what About names. Read through `state`,
     /// so a view showing it is redrawn when a download finishes.
     var licenceURL: URL? {
-        guard case .ready(let size) = state else { return nil }
+        guard let size = state.answering else { return nil }
         let wanted = manifest(size)
         // The manifest's own licence file, not a second guess at its name. Built from
         // `licenceFileName` here as well, this was two independent ways to say where the licence is,
@@ -93,13 +95,18 @@ final class LocalModelController {
     /// from Finder is noticed. A running download's own progress is the truth while it runs, and a
     /// stopped one keeps saying why until something is downloaded or asked for again.
     func refresh() {
-        guard !state.isDownloading else { return }
+        if case .downloading(let progress, let size, let replacing) = state {
+            let now = Self.installedSize(store: store, offered: offered, manifest: manifest)
+            if now != replacing { state = .downloading(progress, size: size, replacing: now) }
+            return
+        }
         let read = Self.read(store: store, offered: offered, manifest: manifest)
         // A stopped download keeps saying why. What it says is **still answering**, though, is
         // re-read: the model an upgrade was replacing can be deleted while the message stands, and
         // a board that goes on naming a model that is gone reports a working app with none.
-        if case .stopped(let reason, let size, let replacing) = state, read == .notDownloaded {
-            if replacing != nil { state = .stopped(reason: reason, size: size, replacing: nil) }
+        if case .stopped(let reason, let size, _) = state, read != .ready(size) {
+            let now = Self.installedSize(store: store, offered: offered, manifest: manifest)
+            state = .stopped(reason: reason, size: size, replacing: now)
             return
         }
         if read != state {
@@ -108,10 +115,10 @@ final class LocalModelController {
             // answering from the model *it* loaded. The download path ends that service before
             // saying ready; this asks it to end too, rather than leaving the row naming one model
             // and the answers coming from another until the service idles out ten minutes later.
-            // `onInstalled` is what holds the local rung back for the length of the unload — see
-            // the coordinator — so the window between publishing "ready" here and that unload
-            // finishing is one where nothing is asked of the process that still has the old model.
+            // Hold the old service before publishing ready. The asynchronous unload can then
+            // finish without a queued lookup slipping through before its task begins.
             if case .ready(let size) = read, state.answering != size {
+                onModelArrived?()
                 Task { [onInstalled] in await onInstalled?() }
             }
             state = read
@@ -146,7 +153,13 @@ final class LocalModelController {
     private func pruneStrays() {
         let store = store
         let keep = LocalModelSize.allCases.map(manifest)
-        pruning = Task.detached(priority: .background) { _ = store.removeStrays(keeping: keep) }
+        let previous = pruning
+        let removal = removal
+        pruning = Task.detached(priority: .background) {
+            await previous?.value
+            await removal?.value
+            _ = store.removeStrays(keeping: keep)
+        }
     }
 
     private static func read(
@@ -180,7 +193,7 @@ final class LocalModelController {
         // What is answering while this downloads: an upgrade replaces a model that keeps working.
         let replacing = Self.installedSize(store: store, offered: offered, manifest: manifest)
         let wanted = manifest(size)
-        let publish = progressPublisher(for: size, replacing: replacing, generation: current)
+        let publish = progressPublisher(for: size, generation: current)
         state = .downloading(
             ModelDownloadProgress(received: 0, total: wanted.totalBytes), size: size, replacing: replacing)
         log.notice("model: downloading \(wanted.identifier, privacy: .public)")
@@ -214,7 +227,10 @@ final class LocalModelController {
                 await self?.installed(size, keeping: wanted)
             } catch {
                 self?.log.error("model: download stopped: \(Self.logDescription(error), privacy: .public)")
-                self?.finish(.stopped(reason: Self.reason(error), size: size, replacing: replacing))
+                if let self {
+                    let now = Self.installedSize(store: store, offered: self.offered, manifest: self.manifest)
+                    self.finish(.stopped(reason: Self.reason(error), size: size, replacing: now))
+                }
             }
         }
     }
@@ -222,7 +238,7 @@ final class LocalModelController {
     /// Progress, throttled, published only while this download is the current one and never
     /// backwards — tasks carrying it can arrive out of order, or after a newer download began.
     private func progressPublisher(
-        for size: LocalModelSize, replacing: LocalModelSize?, generation current: Int
+        for size: LocalModelSize, generation current: Int
     ) -> @Sendable (ModelDownloadProgress) -> Void {
         let throttle = ProgressThrottle()
         // **Staleness is about when a reading was taken, not how large it is.** Dropping any
@@ -236,7 +252,7 @@ final class LocalModelController {
             let ticket = ordering.next()
             Task { @MainActor [weak self] in
                 guard let self, self.generation == current,
-                      case .downloading = self.state, ordering.isNewest(ticket)
+                      case .downloading(_, _, let replacing) = self.state, ordering.isNewest(ticket)
                 else { return }
                 self.state = .downloading(progress, size: size, replacing: replacing)
             }
@@ -258,6 +274,7 @@ final class LocalModelController {
             log.error("model: could not remove \(left.joined(separator: ", "), privacy: .public)")
         }
         log.notice("model: installed \(wanted.identifier, privacy: .public)")
+        onModelArrived?()
         await onInstalled?()
         finish(.ready(size))
     }
@@ -359,14 +376,28 @@ final class LocalModelController {
         refresh()
     }
 
+    /// The most recent removal, including the refresh after deletion, can be awaited by its owner.
+    @ObservationIgnored private(set) var removal: Task<Void, Never>?
+
     /// Removes a model the reader no longer wants, and forgets it as their choice if it was one.
     func remove(_ size: LocalModelSize) {
         let store = store
         let manifest = manifest(size)
         if wanted == size { choose(nil) }
-        Task.detached(priority: .utility) { try? store.remove(manifest) }
+        let pruning = pruning
+        let deletion = Task.detached(priority: .utility) { () -> String? in
+            // Finish our own prune before competing for its store lock.
+            await pruning?.value
+            do { try store.remove(manifest); return nil }
+            catch { return modelFailureDescription(error) }
+        }
         log.notice("model: removing \(manifest.identifier, privacy: .public)")
-        refresh()
+        removal = Task { [weak self, log] in
+            if let failure = await deletion.value {
+                log.error("model: could not remove \(manifest.identifier, privacy: .public): \(failure, privacy: .public)")
+            }
+            self?.refresh()
+        }
     }
 
     /// Where the reader has said weights should come from. **Observed**, so the picker redraws
@@ -425,14 +456,15 @@ final class ProgressOrder: @unchecked Sendable {
 
 /// Progress arrives once per network chunk — tens of thousands of times for 3 GB — and the board
 /// needs a few hundred updates at most. Published when it has moved a quarter of a percent.
-private final class ProgressThrottle: @unchecked Sendable {
+final class ProgressThrottle: @unchecked Sendable {
     private let lock = NSLock()
     private var last: Int64 = -1
 
     func shouldPublish(_ progress: ModelDownloadProgress) -> Bool {
         let step = max(progress.total / 400, 1)
         return lock.withLock {
-            guard progress.received >= progress.total || progress.received - last >= step else { return false }
+            guard progress.received < last || progress.received >= progress.total
+                    || progress.received - last >= step else { return false }
             last = progress.received
             return true
         }

@@ -311,219 +311,223 @@ private extension String {
     }
 }
 
-/// Rung 2 — Apple's on-device model — measured against the same labelled set and the same candidate
-/// sets as rung 1, so the comparison D6 turns on is like for like.
-///
-/// It runs only where Apple Intelligence is available: `deviceNotEligible` on the development Mac
-/// and `available` on the E2E machine, both measured. Where it is not available the selector
-/// abstains, which is the behaviour that ships on every Mac without it — and in mainland China,
-/// a core audience, where it is unavailable outright.
-struct FoundationModelsRungTests {
-    @Test func rungTwoIsMeasuredWhereItCanRun() async throws {
-        let selector = FoundationModelsSenseSelector()
-        // Does it run here at all? One probe, so an unavailable machine reports that rather than
-        // reporting six abstentions as if they were a score.
-        let probe = await selector.choose(
-            from: try SenseSelectionAccuracyTests.candidates(for: "hold"),
-            reading: "It was stowed forward in the ship's hold.", context: .complete, partOfSpeech: "noun")
-        guard probe.abstention != .unavailable else {
-            print("\nrung 2 — Apple on-device model: UNAVAILABLE on this Mac, not measured\n")
-            return
-        }
-        let bare = try await SenseSelectionAccuracyTests.score(
-            FoundationModelsSenseSelector(matchesPartOfSpeech: false),
-            named: "rung 2 — Apple on-device model")
-        let narrowed = try await SenseSelectionAccuracyTests.score(
-            selector, named: "rung 2b — Apple on-device model + part of speech")
-        print(bare.report + narrowed.report)
-        try? (bare.report + narrowed.report).write(
-            toFile: "/tmp/xiaolaidict-probe/rung2.txt", atomically: true, encoding: .utf8)
-        for score in [bare, narrowed] {
-            #expect(score.right + score.wrong + score.abstained == SenseSelectionAccuracyTests.hardCases.count)
-        }
-        // The D6 bar, fixed before any of this was run: ≥ 10 points of top-1 over rung 1, and a
-        // confidently-wrong rate no higher.
-        let rungOne = try await SenseSelectionAccuracyTests.score(
-            EmbeddingSenseSelector(matchesPartOfSpeech: false), named: "rung 1")
-        let total = Double(SenseSelectionAccuracyTests.hardCases.count)
-        let gain = (Double(narrowed.right) - Double(rungOne.right)) / total * 100
-        #expect(gain >= 10, "rung 2 gained only \(gain) points over rung 1")
-        #expect(narrowed.wrong <= rungOne.wrong, "rung 2 bought accuracy by being wrong more often")
-        // A floor rather than a pin: the model is not deterministic, so an exact score would be a
-        // flaky test. It scored 6/6 with 0 wrong on 2026-09-19; below this it has regressed.
-        #expect(narrowed.right >= 4, "rung 2 fell to \(narrowed.right)/6")
-        #expect(narrowed.wrong <= 1, "rung 2 is confidently wrong \(narrowed.wrong) times in 6")
-    }
-
-    /// Whatever it answers is one of the senses it was given. The model returns a *number*, checked
-    /// against the list mechanically, so it cannot name a sense that does not exist.
-    @Test func itCannotInventASense() async throws {
-        let candidates = try SenseSelectionAccuracyTests.candidates(for: "fine")
-        let choice = await FoundationModelsSenseSelector().choose(
-            from: candidates, reading: "He was ordered to pay a heavy fine for speeding.",
-            context: .complete, partOfSpeech: "noun")
-        if let key = choice.key { #expect(candidates.map(\.key).contains(key)) }
-    }
-
-    /// The contract holds identically whether or not the model is there: no sentence, no choice.
-    @Test func itAbstainsWithoutAWholeSentence() async throws {
-        let candidates = try SenseSelectionAccuracyTests.candidates(for: "fine")
-        let selector = FoundationModelsSenseSelector()
-        #expect(await selector.choose(
-            from: candidates, reading: nil, context: .missing, partOfSpeech: nil).abstention == .noContext)
-        #expect(await selector.choose(
-            from: candidates, reading: "He paid the", context: .mayBeCut, partOfSpeech: nil).abstention == .noContext)
-    }
-}
-
-
-/// **The three arrangements, measured against each other on one machine.**
-///
-/// 1 · the on-device model alone · 2 · `NLEmbedding` alone · 3 · the embedding shortlists and the
-/// model decides among the shortlist.
-///
-/// Runs only where Apple Intelligence is available — `deviceNotEligible` on the development Mac,
-/// `available` on the E2E machine — so on the build Mac this reports that it did not happen rather
-/// than reporting a row of abstentions as a score.
-///
-/// **What this set can and cannot settle.** Configuration 1 already scores 6/6 on it, so the set is
-/// saturated: no arrangement can win on accuracy here, and the only accuracy claim available is
-/// *did 3 hold what 1 had*. One case is 17 points, so nothing smaller than a case is a difference.
-/// The candidate sets are also small — 4 to 13 senses — while a shortlist is meant for a big
-/// entry; NOAD's *run* is 27 keyable senses, 13 once narrowed to the verb, which is what
-/// `thePromptShrinksOnAnEntryBigEnoughToShowIt` measures instead.
-///
-/// **`.serialized` because both tests here time the same on-device model.** Run in parallel they
-/// contend for it and each reports the other's load: measured, configuration 1 came back at
-/// ~1,020 ms beside a second model test and ~450 ms alone — a 2× error produced entirely by the
-/// runner. This project's rules already say a wall-clock number measures how many other tests
-/// are executing; that applies to a number *reported* as much as to one asserted.
+/// Model timing tests share one queue, including tests in both nested suites.
 @Suite(.serialized)
-struct SelectorConfigurationTests {
-    /// Wraps a selector and keeps how long each call took, so latency is measured around the thing
-    /// under test rather than around the harness.
-    private final class Timed: SenseSelecting, @unchecked Sendable {
-        let inner: any SenseSelecting
-        let calls = Mutex<[Duration]>([])
-        init(_ inner: any SenseSelecting) { self.inner = inner }
-
-        func choose(
-            from candidates: [SenseCandidate], reading sentence: String?, context: CaptureQuality.Context,
-            partOfSpeech: String?
-        ) async -> SenseSelection {
-            let started = ContinuousClock.now
-            let answer = await inner.choose(
-                from: candidates, reading: sentence, context: context, partOfSpeech: partOfSpeech)
-            calls.withLock { $0.append(ContinuousClock.now - started) }
-            return answer
-        }
-
-        /// Median and worst, in milliseconds. A mean would be led by one cold first call.
-        var summary: String {
-            let sorted = calls.withLock { $0 }.sorted()
-            guard !sorted.isEmpty else { return "not called" }
-            let ms = { (d: Duration) in Double(d.components.attoseconds) / 1e15 + Double(d.components.seconds) * 1000 }
-            return String(format: "median %.0f ms, worst %.0f ms", ms(sorted[sorted.count / 2]), ms(sorted[sorted.count - 1]))
-        }
-    }
-
-    /// One probe, so an unavailable machine says so instead of scoring six abstentions.
-    private static func modelRunsHere() async throws -> Bool {
-        let probe = await FoundationModelsSenseSelector().choose(
-            from: try SenseSelectionAccuracyTests.candidates(for: "hold"),
-            reading: "It was stowed forward in the ship's hold.", context: .complete, partOfSpeech: "noun")
-        return probe.abstention != .unavailable
-    }
-
-    @Test func theThreeConfigurationsAreMeasuredWhereTheModelCanRun() async throws {
-        guard try await Self.modelRunsHere() else {
-            print("\nselector configurations: Apple Intelligence UNAVAILABLE on this Mac, not measured\n")
-            return
-        }
-        var report = "\nselector configurations — on \(SenseSelectionAccuracyTests.hardCases.count) hard cases\n"
-        let model = FoundationModelsSenseSelector()
-        let configurations: [(String, any SenseSelecting)] = [
-            ("1 · model alone", model),
-            ("2 · embedding alone", EmbeddingSenseSelector()),
-            ("3 · shortlist 3 → model", ShortlistSenseSelector(shortlist: 3, decider: model)),
-            ("3 · shortlist 5 → model", ShortlistSenseSelector(shortlist: 5, decider: model)),
-        ]
-        let warmUp = try SenseSelectionAccuracyTests.candidates(for: "hold")
-        for (name, selector) in configurations {
-            // **Discarded.** The first call against a cold model pays to load it: measured 1230 ms
-            // on the first arrangement of a session against 446 ms once warm, which made whichever
-            // configuration happened to run first look 3× slower than the rest. That is a fact
-            // about the machine, not about the arrangement — the same trap this project already
-            // records for the first screen capture after boot.
-            _ = await selector.choose(
-                from: warmUp, reading: "It was stowed forward in the ship's hold.",
-                context: .complete, partOfSpeech: "noun")
-            let timed = Timed(selector)
-            let score = try await SenseSelectionAccuracyTests.score(timed, named: name)
-            report += score.report + "      latency             \(timed.summary)\n"
-        }
-        print(report)
-        try? report.write(
-            toFile: "/tmp/xiaolaidict-probe/configurations.txt", atomically: true, encoding: .utf8)
-    }
-
-    /// The labelled set's entries are too small to show what a shortlist is *for*, so this measures
-    /// the prompt on one that is not: *run* is the 73-sense case the shortlist exists for.
+struct FoundationModelMeasurementTests {
+    /// Rung 2 — Apple's on-device model — measured against the same labelled set and the same candidate
+    /// sets as rung 1, so the comparison D6 turns on is like for like.
     ///
-    /// No labels and no accuracy claim — it reports prompt size and latency, which is the whole
-    /// argument for configuration 3.
-    @Test func thePromptShrinksOnAnEntryBigEnoughToShowIt() async throws {
-        let sentence = "She decided to run for office in the spring election."
-        let partOfSpeech = Lemmatizer.partOfSpeech(of: "run", in: sentence, at: nil)
-        let considered = SenseCandidates.considered(
-            try SenseSelectionAccuracyTests.candidates(for: "run"), matching: partOfSpeech)
-        let shortlisted = EmbeddingSenseSelector()
-            .rank(considered, reading: sentence).prefix(5).map(\.candidate)
-        // The prompt both model rungs send, from the one place it is written.
-        let whole = ModelPrompt.sense(SenseQuestion(
-            sentence: sentence, partOfSpeech: partOfSpeech, senses: considered.map(\.text)))
-        let short = ModelPrompt.sense(SenseQuestion(
-            sentence: sentence, partOfSpeech: partOfSpeech, senses: shortlisted.map(\.text)))
-
-        let everything = SenseCandidates.considered(
-            try SenseSelectionAccuracyTests.candidates(for: "run"), matching: nil)
-        var report = """
-
-            prompt size — run [\(partOfSpeech ?? "?")]
-              keyable senses      \(everything.count)
-              narrowed to \(partOfSpeech ?? "?")     \(considered.count) senses, \(whole.count) characters
-              shortlist 5         \(shortlisted.count) senses, \(short.count) characters
-
-            """
-        guard try await Self.modelRunsHere() else {
-            report += "  latency: Apple Intelligence UNAVAILABLE on this Mac, not measured\n"
-            print(report)
-            return
+    /// It runs only where Apple Intelligence is available: `deviceNotEligible` on the development Mac
+    /// and `available` on the E2E machine, both measured. Where it is not available the selector
+    /// abstains, which is the behaviour that ships on every Mac without it — and in mainland China,
+    /// a core audience, where it is unavailable outright.
+    struct FoundationModelsRungTests {
+        @Test func rungTwoIsMeasuredWhereItCanRun() async throws {
+            let selector = FoundationModelsSenseSelector()
+            // Does it run here at all? One probe, so an unavailable machine reports that rather than
+            // reporting six abstentions as if they were a score.
+            let probe = await selector.choose(
+                from: try SenseSelectionAccuracyTests.candidates(for: "hold"),
+                reading: "It was stowed forward in the ship's hold.", context: .complete, partOfSpeech: "noun")
+            guard probe.abstention != .unavailable else {
+                print("\nrung 2 — Apple on-device model: UNAVAILABLE on this Mac, not measured\n")
+                return
+            }
+            let bare = try await SenseSelectionAccuracyTests.score(
+                FoundationModelsSenseSelector(matchesPartOfSpeech: false),
+                named: "rung 2 — Apple on-device model")
+            let narrowed = try await SenseSelectionAccuracyTests.score(
+                selector, named: "rung 2b — Apple on-device model + part of speech")
+            print(bare.report + narrowed.report)
+            try? (bare.report + narrowed.report).write(
+                toFile: "/tmp/xiaolaidict-probe/rung2.txt", atomically: true, encoding: .utf8)
+            for score in [bare, narrowed] {
+                #expect(score.right + score.wrong + score.ambiguous + score.abstained == SenseSelectionAccuracyTests.hardCases.count)
+            }
+            // The D6 bar, fixed before any of this was run: ≥ 10 points of top-1 over rung 1, and a
+            // confidently-wrong rate no higher.
+            let rungOne = try await SenseSelectionAccuracyTests.score(
+                EmbeddingSenseSelector(matchesPartOfSpeech: false), named: "rung 1")
+            let total = Double(SenseSelectionAccuracyTests.hardCases.count)
+            let gain = (Double(narrowed.right) - Double(rungOne.right)) / total * 100
+            #expect(gain >= 10, "rung 2 gained only \(gain) points over rung 1")
+            #expect(narrowed.wrong <= rungOne.wrong, "rung 2 bought accuracy by being wrong more often")
+            // A floor rather than a pin: the model is not deterministic, so an exact score would be a
+            // flaky test. It scored 6/6 with 0 wrong on 2026-09-19; below this it has regressed.
+            #expect(narrowed.right >= 4, "rung 2 fell to \(narrowed.right)/6")
+            #expect(narrowed.wrong <= 1, "rung 2 is confidently wrong \(narrowed.wrong) times in 6")
         }
-        // **Interleaved, after a discarded warm-up.** Run one arrangement to completion and then
-        // the other and the second one inherits a warmer model, which is how a 730 ms / 113 ms
-        // "prompt size wins" reading was produced from the order alone. Alternating spreads any
-        // drift across both.
-        let arrangements = [("all senses", considered), ("shortlist 5", Array(shortlisted))]
-        let timers = [Timed(FoundationModelsSenseSelector(matchesPartOfSpeech: false)),
-                      Timed(FoundationModelsSenseSelector(matchesPartOfSpeech: false))]
-        for (timer, arrangement) in zip(timers, arrangements) {
-            _ = await timer.inner.choose(
-                from: arrangement.1, reading: sentence, context: .complete, partOfSpeech: partOfSpeech)
+
+        /// Whatever it answers is one of the senses it was given. The model returns a *number*, checked
+        /// against the list mechanically, so it cannot name a sense that does not exist.
+        @Test func itCannotInventASense() async throws {
+            let candidates = try SenseSelectionAccuracyTests.candidates(for: "fine")
+            let choice = await FoundationModelsSenseSelector().choose(
+                from: candidates, reading: "He was ordered to pay a heavy fine for speeding.",
+                context: .complete, partOfSpeech: "noun")
+            if let key = choice.key { #expect(candidates.map(\.key).contains(key)) }
         }
-        for _ in 0..<5 {
-            for (timer, arrangement) in zip(timers, arrangements) {
-                _ = await timer.choose(
-                    from: arrangement.1, reading: sentence, context: .complete,
-                    partOfSpeech: partOfSpeech)
+
+        /// The contract holds identically whether or not the model is there: no sentence, no choice.
+        @Test func itAbstainsWithoutAWholeSentence() async throws {
+            let candidates = try SenseSelectionAccuracyTests.candidates(for: "fine")
+            let selector = FoundationModelsSenseSelector()
+            #expect(await selector.choose(
+                from: candidates, reading: nil, context: .missing, partOfSpeech: nil).abstention == .noContext)
+            #expect(await selector.choose(
+                from: candidates, reading: "He paid the", context: .mayBeCut, partOfSpeech: nil).abstention == .noContext)
+        }
+    }
+
+
+    /// **The three arrangements, measured against each other on one machine.**
+    ///
+    /// 1 · the on-device model alone · 2 · `NLEmbedding` alone · 3 · the embedding shortlists and the
+    /// model decides among the shortlist.
+    ///
+    /// Runs only where Apple Intelligence is available — `deviceNotEligible` on the development Mac,
+    /// `available` on the E2E machine — so on the build Mac this reports that it did not happen rather
+    /// than reporting a row of abstentions as a score.
+    ///
+    /// **What this set can and cannot settle.** Configuration 1 already scores 6/6 on it, so the set is
+    /// saturated: no arrangement can win on accuracy here, and the only accuracy claim available is
+    /// *did 3 hold what 1 had*. One case is 17 points, so nothing smaller than a case is a difference.
+    /// The candidate sets are also small — 4 to 13 senses — while a shortlist is meant for a big
+    /// entry; NOAD's *run* is 27 keyable senses, 13 once narrowed to the verb, which is what
+    /// `thePromptShrinksOnAnEntryBigEnoughToShowIt` measures instead.
+    ///
+    /// **The common parent serializes both suites because they time the same model.** Run in parallel they
+    /// contend for it and each reports the other's load: measured, configuration 1 came back at
+    /// ~1,020 ms beside a second model test and ~450 ms alone — a 2× error produced entirely by the
+    /// runner. This project's rules already say a wall-clock number measures how many other tests
+    /// are executing; that applies to a number *reported* as much as to one asserted.
+    struct SelectorConfigurationTests {
+        /// Wraps a selector and keeps how long each call took, so latency is measured around the thing
+        /// under test rather than around the harness.
+        private final class Timed: SenseSelecting, @unchecked Sendable {
+            let inner: any SenseSelecting
+            let calls = Mutex<[Duration]>([])
+            init(_ inner: any SenseSelecting) { self.inner = inner }
+
+            func choose(
+                from candidates: [SenseCandidate], reading sentence: String?, context: CaptureQuality.Context,
+                partOfSpeech: String?
+            ) async -> SenseSelection {
+                let started = ContinuousClock.now
+                let answer = await inner.choose(
+                    from: candidates, reading: sentence, context: context, partOfSpeech: partOfSpeech)
+                calls.withLock { $0.append(ContinuousClock.now - started) }
+                return answer
+            }
+
+            /// Median and worst, in milliseconds. A mean would be led by one cold first call.
+            var summary: String {
+                let sorted = calls.withLock { $0 }.sorted()
+                guard !sorted.isEmpty else { return "not called" }
+                let ms = { (d: Duration) in Double(d.components.attoseconds) / 1e15 + Double(d.components.seconds) * 1000 }
+                return String(format: "median %.0f ms, worst %.0f ms", ms(sorted[sorted.count / 2]), ms(sorted[sorted.count - 1]))
             }
         }
-        for (timer, arrangement) in zip(timers, arrangements) {
-            report += "  \(arrangement.0.padded(20))\(timer.summary)\n"
+
+        /// One probe, so an unavailable machine says so instead of scoring six abstentions.
+        private static func modelRunsHere() async throws -> Bool {
+            let probe = await FoundationModelsSenseSelector().choose(
+                from: try SenseSelectionAccuracyTests.candidates(for: "hold"),
+                reading: "It was stowed forward in the ship's hold.", context: .complete, partOfSpeech: "noun")
+            return probe.abstention != .unavailable
         }
-        print(report)
-        try? report.write(toFile: "/tmp/xiaolaidict-probe/prompt-size.txt", atomically: true, encoding: .utf8)
+
+        @Test func theThreeConfigurationsAreMeasuredWhereTheModelCanRun() async throws {
+            guard try await Self.modelRunsHere() else {
+                print("\nselector configurations: Apple Intelligence UNAVAILABLE on this Mac, not measured\n")
+                return
+            }
+            var report = "\nselector configurations — on \(SenseSelectionAccuracyTests.hardCases.count) hard cases\n"
+            let model = FoundationModelsSenseSelector()
+            let configurations: [(String, any SenseSelecting)] = [
+                ("1 · model alone", model),
+                ("2 · embedding alone", EmbeddingSenseSelector()),
+                ("3 · shortlist 3 → model", ShortlistSenseSelector(shortlist: 3, decider: model)),
+                ("3 · shortlist 5 → model", ShortlistSenseSelector(shortlist: 5, decider: model)),
+            ]
+            let warmUp = try SenseSelectionAccuracyTests.candidates(for: "hold")
+            for (name, selector) in configurations {
+                // **Discarded.** The first call against a cold model pays to load it: measured 1230 ms
+                // on the first arrangement of a session against 446 ms once warm, which made whichever
+                // configuration happened to run first look 3× slower than the rest. That is a fact
+                // about the machine, not about the arrangement — the same trap this project already
+                // records for the first screen capture after boot.
+                _ = await selector.choose(
+                    from: warmUp, reading: "It was stowed forward in the ship's hold.",
+                    context: .complete, partOfSpeech: "noun")
+                let timed = Timed(selector)
+                let score = try await SenseSelectionAccuracyTests.score(timed, named: name)
+                report += score.report + "      latency             \(timed.summary)\n"
+            }
+            print(report)
+            try? report.write(
+                toFile: "/tmp/xiaolaidict-probe/configurations.txt", atomically: true, encoding: .utf8)
+        }
+
+        /// The labelled set's entries are too small to show what a shortlist is *for*, so this measures
+        /// the prompt on one that is not: *run* is the 73-sense case the shortlist exists for.
+        ///
+        /// No labels and no accuracy claim — it reports prompt size and latency, which is the whole
+        /// argument for configuration 3.
+        @Test func thePromptShrinksOnAnEntryBigEnoughToShowIt() async throws {
+            let sentence = "She decided to run for office in the spring election."
+            let partOfSpeech = Lemmatizer.partOfSpeech(of: "run", in: sentence, at: nil)
+            let considered = SenseCandidates.considered(
+                try SenseSelectionAccuracyTests.candidates(for: "run"), matching: partOfSpeech)
+            let shortlisted = EmbeddingSenseSelector()
+                .rank(considered, reading: sentence).prefix(5).map(\.candidate)
+            // The prompt both model rungs send, from the one place it is written.
+            let whole = ModelPrompt.sense(SenseQuestion(
+                sentence: sentence, partOfSpeech: partOfSpeech, senses: considered.map(\.text)))
+            let short = ModelPrompt.sense(SenseQuestion(
+                sentence: sentence, partOfSpeech: partOfSpeech, senses: shortlisted.map(\.text)))
+
+            let everything = SenseCandidates.considered(
+                try SenseSelectionAccuracyTests.candidates(for: "run"), matching: nil)
+            var report = """
+
+                prompt size — run [\(partOfSpeech ?? "?")]
+                  keyable senses      \(everything.count)
+                  narrowed to \(partOfSpeech ?? "?")     \(considered.count) senses, \(whole.count) characters
+                  shortlist 5         \(shortlisted.count) senses, \(short.count) characters
+
+                """
+            guard try await Self.modelRunsHere() else {
+                report += "  latency: Apple Intelligence UNAVAILABLE on this Mac, not measured\n"
+                print(report)
+                return
+            }
+            // **Interleaved, after a discarded warm-up.** Run one arrangement to completion and then
+            // the other and the second one inherits a warmer model, which is how a 730 ms / 113 ms
+            // "prompt size wins" reading was produced from the order alone. Alternating spreads any
+            // drift across both.
+            let arrangements = [("all senses", considered), ("shortlist 5", Array(shortlisted))]
+            let timers = [Timed(FoundationModelsSenseSelector(matchesPartOfSpeech: false)),
+                          Timed(FoundationModelsSenseSelector(matchesPartOfSpeech: false))]
+            for (timer, arrangement) in zip(timers, arrangements) {
+                _ = await timer.inner.choose(
+                    from: arrangement.1, reading: sentence, context: .complete, partOfSpeech: partOfSpeech)
+            }
+            for _ in 0..<5 {
+                for (timer, arrangement) in zip(timers, arrangements) {
+                    _ = await timer.choose(
+                        from: arrangement.1, reading: sentence, context: .complete,
+                        partOfSpeech: partOfSpeech)
+                }
+            }
+            for (timer, arrangement) in zip(timers, arrangements) {
+                report += "  \(arrangement.0.padded(20))\(timer.summary)\n"
+            }
+            print(report)
+            try? report.write(toFile: "/tmp/xiaolaidict-probe/prompt-size.txt", atomically: true, encoding: .utf8)
+        }
     }
+
 }
 
 /// **Does knowing the word class find the right entry?** — the measurement ADR-0004 turns on.

@@ -1,6 +1,8 @@
 import Foundation
 import Testing
 import XiaolaiDictTestSupport
+@testable import XiaolaiDict
+@testable import XiaolaiDictUI
 
 /// The string catalog is what a translator is given, and `Tools/strings.sh` generates it from the
 /// source. Two things have to hold for that to mean anything: what the code says must be in it,
@@ -429,5 +431,26 @@ struct StringCatalogTests {
                      "no de.lproj was produced, so a translation would never reach the bundle")
         let table = try #require(NSDictionary(contentsOf: compiled) as? [String: String])
         #expect(table[key] == "ÜBERSETZT", "the compiled table does not answer with the translation")
+    }
+}
+
+/// The delegate must keep its appearance in the same preferences suite as its other settings.
+@MainActor
+struct AppAppearanceDefaultsTests {
+    @Test func delegatesKeepIndependentAppearancePreferences() throws {
+        let first = TemporaryDefaults.suite(), second = TemporaryDefaults.suite()
+        AppearanceStore(defaults: first).save(.compact)
+        AppearanceStore(defaults: second).save(.large)
+        let a = XiaolaiDictApp(defaults: first, hotkeys: HotkeyCenter(backend: FakeBackend()),
+                             models: .temporary(defaults: first))
+        let b = XiaolaiDictApp(defaults: second, hotkeys: HotkeyCenter(backend: FakeBackend()),
+                             models: .temporary(defaults: second))
+        // Require two distinct injected values before writing: a broken delegate using the real
+        // preferences cannot satisfy both, so this regression test cannot change the real settings.
+        try #require(a.appearance.textSize == .compact && b.appearance.textSize == .large)
+        a.appearance.textSize = .comfortable
+        #expect(AppearanceStore(defaults: first).loadTextSize() == .comfortable)
+        #expect(AppearanceStore(defaults: second).loadTextSize() == .large)
+        #expect(b.appearance.textSize == .large)
     }
 }

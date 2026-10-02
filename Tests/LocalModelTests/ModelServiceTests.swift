@@ -419,8 +419,16 @@ struct ModelServiceTests {
             ScriptedModel(.answer(#"{"senseNumber": 1}"#)), store: store, available: 6 * Self.gigabyte,
             physical: 8 * Self.gigabyte, built: built, manifests: both)
         let reply = await eight.reply(to: .pickSense(Self.question))
-        #expect(reply != .sense(1), "a Mac offered no size answered from a model anyway")
+        #expect(reply == .failure(.insufficientPhysicalMemory(
+            needed: 16 * Self.gigabyte, available: 8 * Self.gigabyte)))
         #expect(built.withLock { $0 } == 0, "a model was built on a Mac offered nothing")
+
+        let largeOnly = try service(
+            ScriptedModel(.answer(#"{"senseNumber": 1}"#)), store: store, available: 12 * Self.gigabyte,
+            physical: 16 * Self.gigabyte, built: built, manifests: [Self.manifest(.large)])
+        #expect(await largeOnly.reply(to: .pickSense(Self.question)) == .failure(.insufficientPhysicalMemory(
+            needed: 26_532 * LocalModelSize.megabyte, available: 16 * Self.gigabyte)))
+        #expect(built.withLock { $0 } == 0)
     }
 
     /// Unknown free memory is not plenty.
@@ -669,6 +677,23 @@ struct ModelServiceTests {
             Issue.record("the sentence was handed back as an explanation of itself, as \(reply)")
             return
         }
+    }
+
+    @Test func anExplanationInTheSourceLanguageIsRefusedWhenChineseWasAskedFor() async throws {
+        let service = try service(ScriptedModel(.answer("Here the word describes the cargo space inside the ship, where goods are stored for transport.")))
+        let reply = await service.reply(to: .explain(SentenceQuestion(
+            sentence: "The ship's hold was full.", term: "hold", target: "zh-Hans")))
+        guard case .failure(.generationFailed) = reply else {
+            Issue.record("an untranslated explanation was accepted: \(reply)")
+            return
+        }
+    }
+
+    @Test func anExplanationInTheRequestedLanguageIsAccepted() async throws {
+        let text = "这里的 hold 指船上存放货物的货舱。句子的意思是货舱已经装满了。"
+        let service = try service(ScriptedModel(.answer(text)))
+        #expect(await service.reply(to: .explain(SentenceQuestion(
+            sentence: "The ship's hold was full.", term: "hold", target: "zh-Hans"))) == .explanation(text))
     }
 
     /// **A sense is picked at temperature 0.** It is a choice from a numbered list, not writing:

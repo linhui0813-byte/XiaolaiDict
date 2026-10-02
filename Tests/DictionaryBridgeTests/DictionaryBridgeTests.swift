@@ -102,7 +102,9 @@ struct DictionaryBridgeTests {
     /// showed each entry as one run of text, stylesheet included. What the service sends must be
     /// XHTML at the root.
     @Test func everyEntryIsXHTMLAtItsRoot() throws {
-        for entry in try DictionaryBridge.entries(for: "meeting").entries {
+        let entries = try DictionaryBridge.entries(for: "meeting").entries
+        try #require(!entries.isEmpty, "the XHTML probe returned no entries to check")
+        for entry in entries {
             let root = try #require(entry.html.range(of: #"<html\b[^>]*>"#, options: .regularExpression).map { entry.html[$0] })
             #expect(root.contains(#"xmlns="http://www.w3.org/1999/xhtml""#), "\(entry.dictionary.name): \(root)")
         }
@@ -186,19 +188,19 @@ struct StyledDocumentTests {
         // The bare entry of form 0: no document, no stylesheet.
         #"<d:entry xmlns:d="http://www.apple.com/DTDs/DictionaryService-1.0.rng"><p>x</p></d:entry>"#,
         // A document without its stylesheet — or with the element and nothing in it.
-        #"<html><body><p>x</p></body></html>"#,
-        #"<html><head><style/></head><body><p>x</p></body></html>"#,
-        #"<html><head><style>   </style></head><body><p>x</p></body></html>"#,
+        #"<html xmlns="http://www.w3.org/1999/xhtml"><body><p>x</p></body></html>"#,
+        #"<html xmlns="http://www.w3.org/1999/xhtml"><head><style/></head><body><p>x</p></body></html>"#,
+        #"<html xmlns="http://www.w3.org/1999/xhtml"><head><style>   </style></head><body><p>x</p></body></html>"#,
         // Found by the verifier: a stray brace passed for a stylesheet.
-        #"<html><head><style>{</style></head><body><p>x</p></body></html>"#,
-        #"<html><head><style>p {}</style></head><body><p>x</p></body></html>"#,
+        #"<html xmlns="http://www.w3.org/1999/xhtml"><head><style>{</style></head><body><p>x</p></body></html>"#,
+        #"<html xmlns="http://www.w3.org/1999/xhtml"><head><style>p {}</style></head><body><p>x</p></body></html>"#,
         // Found by the verifier: a rule inside a comment is not a stylesheet.
-        #"<html><head><style>/* p { color: red } */</style></head><body><p>x</p></body></html>"#,
+        #"<html xmlns="http://www.w3.org/1999/xhtml"><head><style>/* p { color: red } */</style></head><body><p>x</p></body></html>"#,
         // Found on the E2E machine: outside the XHTML namespace, html, style and body are not HTML,
         // and the whole document renders as one run of text.
         #"<html xmlns:d="http://www.apple.com/DTDs/DictionaryService-1.0.rng"><head><style>p { margin: 0 }</style></head><body><p>x</p></body></html>"#,
         // Malformed: the panel parses entries as XML and would show an error page.
-        #"<html><head><style>p{}</style></head><body><p>x</body></html>"#,
+        #"<html xmlns="http://www.w3.org/1999/xhtml"><head><style>p { color: red }</style></head><body><p>x</body></html>"#,
     ])
     func anythingElseFails(document: String) {
         #expect(!DictionaryBridge.isStyledDocument(document))

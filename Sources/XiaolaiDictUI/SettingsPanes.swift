@@ -780,7 +780,7 @@ public struct AppRelease: Equatable, Sendable {
 
     /// The build is in brackets because it is not the name of anything — two builds of 0.0.2 are
     /// both 0.0.2, and the bracketed number is the only thing that separates them.
-    public var label: String { "Version \(version) (\(build))" }
+    public var label: String { String(localized: "Version \(version) (\(build))") }
 }
 
 /// Who made this, and which build it is.

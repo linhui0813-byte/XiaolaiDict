@@ -57,15 +57,20 @@ HEADER
     while IFS=$'\t' read -r identity location version subpath; do
         directory=$build_root/checkouts/$subpath
         [ -d "$directory" ] || { echo "error: $identity is not checked out at $directory" >&2; exit 1; }
-        licence=$(find "$directory" -maxdepth 1 -type f \
+        licences=$(find "$directory" -maxdepth 1 -type f \
             \( -iname 'LICENSE' -o -iname 'LICENCE' -o -iname 'COPYING' \
-               -o -iname 'LICENSE.*' -o -iname 'LICENCE.*' -o -iname 'COPYING.*' \) | sort | head -1)
-        [ -n "$licence" ] || { echo "error: $identity carries no licence file in $directory" >&2; exit 1; }
+               -o -iname 'LICENSE.*' -o -iname 'LICENCE.*' -o -iname 'COPYING.*' \
+               -o -iname 'LICENSE-*' -o -iname 'LICENCE-*' -o -iname 'COPYING-*' \) | LC_ALL=C sort)
+        [ -n "$licences" ] || { echo "error: $identity carries no licence file in $directory" >&2; exit 1; }
 
         printf '================================================================================\n'
         printf '%s %s\n%s\n' "$identity" "$version" "$location"
         rule
-        cat "$licence"
+        while IFS= read -r licence; do
+            printf '\n%s\n' "$(basename "$licence") — $identity"
+            rule
+            cat "$licence"
+        done <<<"$licences"
         # Apache-2.0 §4(d) asks for the NOTICE itself, not only the licence, wherever the package
         # ships one. Two of these do.
         for notice in "$directory"/NOTICE "$directory"/NOTICE.*; do

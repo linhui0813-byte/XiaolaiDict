@@ -70,6 +70,7 @@ public struct LookupCardView: View {
         HStack(alignment: .firstTextBaseline, spacing: scale.space.inline) {
             Text(card.heading)
                 .font(.system(size: scale.text.display, weight: .semibold))
+                .foregroundStyle(.primary)
             if let partOfSpeech = PartOfSpeechLabel.reader(card.partOfSpeech) {
                 Text(partOfSpeech)
                     .font(.system(size: scale.text.body).italic())
@@ -356,14 +357,9 @@ public struct LookupCardView: View {
                     }
                 }
             }
-            // **Keyed to the entry, not to `onAppear`.** SwiftUI keeps this child's identity when
-            // the reader switches dictionary, so `openedOnce` stayed true and the alternatives
-            // stayed however the *previous* entry had left them: an entry the selector could not
-            // decide came up collapsed, against `opensAlternatives`, because a different entry's
-            // list had been closed by hand.
-            //
-            // `task(id:)` rather than `onChange`: it runs on first appearance too, so one rule
-            // covers both and there is no `openedOnce` to get out of step.
+            // The detailed panel keys this child by entry identity, so switching between
+            // dictionaries with the same heading starts fresh. Re-seed on first appearance and
+            // whenever this entry's heading changes.
             .task(id: card.heading) {
                 showingAlternatives = showsAllMeanings || card.opensAlternatives
             }
@@ -704,6 +700,7 @@ public struct LookupPanelContent: View {
                         onConfirm: confirmable(entry).map { encounter in
                             { confirm(encounter, in: entry) }
                         }, showsAllMeanings: true)
+                    .id(PanelSelection.identity(of: entry))
                     // Only beside the card it was made for. A different dictionary, or a sense that
                     // arrived after it was asked, is a different card.
                     if let translation, translation.of == translationKey(for: entry) {
@@ -800,6 +797,7 @@ public struct LookupPanelContent: View {
     private func cardWithoutAnEntry(_ answer: LookupCard.Answer) -> LookupCard {
         LookupCard(
             term: presentation.term, lemma: presentation.lemma.text,
+            sentenceRange: presentation.sentenceRange,
             heading: presentation.term, partOfSpeech: nil,
             pronunciation: nil, answer: answer,
             // **Shown on the no-entry card too**, and this is where it matters most: a reader whose
@@ -874,6 +872,7 @@ public struct LookupPanelContent: View {
         // it was. Left standing, it says the sense now shown is the one the reader has, while the
         // pasteboard still holds the old one.
         copied = false
+        enrolled = false
         translating?.cancel()
         translating = nil
         translation = nil

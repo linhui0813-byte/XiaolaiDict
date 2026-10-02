@@ -275,8 +275,8 @@ public actor ModelService {
             }
             // **The sentence handed back is not an explanation of it**, any more than it is a
             // translation of it — the same failure that reads as success, and the same check.
-            guard TranslationCheck.isTranslation(text, of: question.sentence) else {
-                return .failure(.generationFailed("the model answered with the sentence it was given"))
+            guard TranslationCheck.isTranslation(text, of: question.sentence, into: question.target) else {
+                return .failure(.generationFailed("the model returned an untranslated explanation"))
             }
             return .explanation(text)
         }
@@ -337,6 +337,10 @@ public actor ModelService {
         let installed = store.installedManifests(among: manifests)
         guard let smallest = installed.map(\.size).min() else { return .failure(.notInstalled) }
         guard let chosen = fitting(installed: installed, available: available) else {
+            if !ModelSizing.offered(physicalMemory: physicalMemory).contains(smallest) {
+                return .failure(.insufficientPhysicalMemory(
+                    needed: smallest.peakMemory * ModelSizing.shareOfPhysicalMemory, available: physicalMemory))
+            }
             return .failure(.insufficientMemory(
                 needed: smallest.peakMemory + ModelSizing.headroom, available: available))
         }

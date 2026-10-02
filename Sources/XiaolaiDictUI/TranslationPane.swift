@@ -199,7 +199,7 @@ struct TranslationPaneView: View {
     @ViewBuilder private var answer: some View {
         switch pane.body {
         case .text(let text):
-            Text(text).font(.callout).textSelection(.enabled)
+            Text(text).font(.callout)
                 .fixedSize(horizontal: false, vertical: true)
         case .languagePack(let source, let target):
             Text("""
@@ -220,6 +220,13 @@ struct TranslationPaneView: View {
     /// came back — one begun since would otherwise be offered by a button that does nothing.
     @ViewBuilder private var waysOut: some View {
         HStack(spacing: scale.space.stack) {
+            if case .text(let text) = pane.body {
+                Button("Copy translation") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(text, forType: .string)
+                }
+                .buttonStyle(.glass)
+            }
             if let settings = TranslationPane.languageSettings, pane.opensLanguageSettings {
                 Button("Open Language & Region…") { open(settings) }
                     .buttonStyle(.glass)

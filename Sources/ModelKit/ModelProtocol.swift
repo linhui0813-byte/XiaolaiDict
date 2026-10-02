@@ -97,6 +97,8 @@ public enum ModelFailure: Error, Codable, Sendable, Equatable {
     case notInstalled
     /// Installed, and it does not fit in what is free right now. Decided before loading.
     case insufficientMemory(needed: UInt64, available: UInt64)
+    /// Installed, but outside this Mac's total-memory admission rule. Freeing memory cannot fix it.
+    case insufficientPhysicalMemory(needed: UInt64, available: UInt64)
     /// The model declined the request. Its own abstention, never folded into "not here".
     case refused
     /// The model could not answer this request — its weights failed to load on first use, or the

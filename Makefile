@@ -58,18 +58,17 @@ export XIAOLAIDICT_BUILD_NUMBER := $(BUILD_NUMBER)
 NOTARY_PROFILE ?= chase-notary
 export XIAOLAIDICT_NOTARY_PROFILE := $(NOTARY_PROFILE)
 
-# No bundle is published over failing tests. The Swift tests cover what the bundle is compiled
-# from. The icon generator reaches the bundle only by regenerating Resources/, and the script runs
-# its tests with every regeneration — which a change to the generator always triggers — before any
-# bundle is built from the result: they run exactly when they can affect what is published.
-all: test-swift
+# Swift and tool tests gate every published bundle. The Python suite also covers the persistent
+# signer and update compatibility checks, which can change without an icon regeneration.
+# The icon generator additionally checks its regenerated output before assembly.
+all: test-swift test-tools
 	@Tools/build-bundle.sh build
 
-run: test-swift
+run: test-swift test-tools
 	@Tools/build-bundle.sh run
 
 # Independent local app, with strict code-hash peer requirements instead of a paid signing team.
-local: local-test
+local: local-test test-tools
 	@HUIDICT_LOCAL_BUILD=1 Tools/build-bundle.sh build
 
 local-test:
@@ -105,10 +104,23 @@ test-tools:
 	python3 -m unittest discover -s Tools/tests
 	python3 -m unittest discover -s Tools/fsrs
 
-# Re-extract every localizable string into Strings/Localizable.xcstrings, the file a
-# translator is given. Run it after adding or changing anything the reader reads.
+# Re-extract both compile-time app variants into the translator's string catalog.
+# Restore the previous catalog if either extraction fails. Run after changing display text.
 strings: metal-guard
-	Tools/strings.sh
+	@set -eu; \
+	    mkdir -p .build; \
+	    snapshot=$$(mktemp .build/string-catalog.XXXXXX); \
+	    cp Strings/Localizable.xcstrings "$$snapshot"; \
+	    trap 'cp "$$snapshot" Strings/Localizable.xcstrings; rm -f "$$snapshot"' EXIT; \
+	    Tools/strings.sh; \
+	    rm -rf .build/strings-huidict .build/localized-strings-huidict; \
+	    mkdir -p .build/localized-strings-huidict; \
+	    swift build --scratch-path .build/strings-huidict --product XiaolaiDict \
+	        -Xswiftc -DHUIDICT_LOCAL_BUILD -Xswiftc -emit-localized-strings \
+	        -Xswiftc -emit-localized-strings-path -Xswiftc "$$PWD/.build/localized-strings-huidict"; \
+	    xcrun xcstringstool sync Strings/Localizable.xcstrings --stringsdata \
+	        .build/localized-strings/*.stringsdata .build/localized-strings-huidict/*.stringsdata; \
+	    trap 'rm -f "$$snapshot"' EXIT
 
 icon:
 	@Tools/build-bundle.sh icon
@@ -129,7 +141,7 @@ e2e-status:
 
 # Tests first, as for every bundle: nothing is published over a failing suite, and a notarised
 # one least of all, since it is the build other people download.
-release: test-swift
+release: test-swift test-tools
 	@Tools/release.sh
 
 clean:

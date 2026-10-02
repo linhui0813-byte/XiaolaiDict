@@ -94,13 +94,31 @@ struct TestInventoryTests {
         }
     }
 
-    /// `@Test` occurrences under `Tests/<target>`. Full-line comments are stripped for the same
-    /// reason `SourceScan` strips them: a doc comment explaining `@Test` is not a test.
+    @Test func literalMentionsDoNotInflateTheDeclarationCount() {
+        let code = [
+            #"let spelling = "@Test""#,
+            #"func helper() { print("@Test") }"#,
+            "    @Test func first() {}",
+            "    @Test(.serialized)",
+            "    func second() {}",
+            "    @Testing func notATest() {}",
+            "// @Test func commentedOut() {}",
+        ].joined(separator: "\n")
+        #expect(Self.declarations(in: code) == 2)
+    }
+
+    /// Count declaration attributes rather than mentions inside expressions or string literals.
+    private static func declarations(in code: String) -> Int {
+        let pattern = try! NSRegularExpression(pattern: #"(?m)^[\t ]*@Test\b"#)
+        return pattern.numberOfMatches(in: code, range: NSRange(code.startIndex..., in: code))
+    }
+
+    /// Declarations under `Tests/<target>`. SourceScan also strips full-line comments.
     private static func tests(in target: String) throws -> Int {
         let root = testsRoot.appending(path: target)
         var count = 0
         for (_, code) in try SourceScan.code(under: root) {
-            count += code.components(separatedBy: "@Test").count - 1
+            count += declarations(in: code)
         }
         return count
     }

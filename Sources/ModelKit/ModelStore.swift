@@ -83,10 +83,38 @@ public struct ModelStore: Sendable, Equatable {
     /// being asked; that is what stopped, so removing one has to be something they can ask for —
     /// ADR-0041. Pruning is still `removeStrays(keeping:)`, which takes only what nobody chose.
     public func remove(_ manifest: ModelManifest) throws {
+        // A removal must not recreate a store that has gone, or delete a live install's files.
+        guard FileManager.default.fileExists(atPath: root.path) else { return }
+        let parent = storeLockFile().deletingLastPathComponent()
+        if !FileManager.default.fileExists(atPath: parent.path) {
+            do { try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false) }
+            catch {
+                // Another operation may have created this directory after the existence check.
+                guard (try? parent.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else { throw error }
+            }
+        }
+        guard let model = Self.takeRemovalLock(lockFile(for: manifest)) else {
+            throw ModelDownloadError.alreadyInstalling(identifier: manifest.identifier)
+        }
+        defer { model.release() }
+        guard let store = InstallLock(storeLockFile()) else {
+            throw ModelDownloadError.couldNotDiscard(path: manifest.identifier, reason: "the model store is busy")
+        }
+        defer { store.release() }
         for directory in [directory(for: manifest), stagingDirectory(for: manifest)]
         where FileManager.default.fileExists(atPath: directory.path) {
             try FileManager.default.removeItem(at: directory)
         }
+    }
+
+    /// Brief probes use the same lock as installations. Tolerate their hold without waiting
+    /// indefinitely for a real writer. Removal runs off the UI actor in the app.
+    static func takeRemovalLock(_ file: URL, wait: () -> Void = { Thread.sleep(forTimeInterval: 0.01) }) -> InstallLock? {
+        for attempt in 0..<5 {
+            if let held = InstallLock(file) { return held }
+            if attempt < 4 { wait() }
+        }
+        return nil
     }
 
     /// Every complete model directory under the root **except** `keeping`'s, removed. Returns what
@@ -426,13 +454,16 @@ public struct ModelDownloader: Sendable {
     ) async throws -> URL {
         if let installed = store.installed(manifest) { return installed }
         let staging = store.stagingDirectory(for: manifest)
-        try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
-        guard let lock = InstallLock(store.lockFile(for: manifest)) else {
+        try FileManager.default.createDirectory(
+            at: store.lockFile(for: manifest).deletingLastPathComponent(), withIntermediateDirectories: true)
+        guard let lock = try await Self.takeInstallLock(store.lockFile(for: manifest)) else {
             throw ModelDownloadError.alreadyInstalling(identifier: manifest.identifier)
         }
         defer { lock.release() }
         // Installed while this waited for the lock, or between the two looks.
         if let installed = store.installed(manifest) { return installed }
+        // A prune can see the model directory only once its installation lock is held.
+        try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
 
         try normalizeStaging(manifest, in: staging)
         let present = arrivedBytes(of: manifest, in: staging)
@@ -533,11 +564,11 @@ public struct ModelDownloader: Sendable {
                 }
                 // **A host that ends a range response early has not failed**, so nothing is
                 // thrown — and taking a clean return for a finished file reported a size
-                // mismatch with attempts unspent. Retried only where the attempt actually
-                // advanced: a return that added nothing means the host has no more to give, and
-                // the size check below is the right place for that to be reported.
+                // mismatch with attempts unspent. Retry when the partial changed: a shorter one
+                // means the host restarted it. An unchanged partial means the host has no more
+                // to give, and the size check below is the right place to report that.
                 let now = size(of: partial)
-                if now >= file.size || now <= offset { break }
+                if now >= file.size || now == offset { break }
                 attemptsLeft -= 1
                 guard attemptsLeft > 0 else { break }
             } catch {
@@ -580,6 +611,20 @@ public struct ModelDownloader: Sendable {
             throw ModelDownloadError.incomplete(identifier: manifest.identifier)
         }
         return installed
+    }
+
+    /// A status probe briefly takes the same lock. Wait out that short contention while keeping
+    /// a real second installation bounded and cancellation immediate.
+    static func takeInstallLock(
+        _ file: URL,
+        betweenAttempts: @Sendable () async throws -> Void = { try await Task.sleep(for: .milliseconds(10)) }
+    ) async throws -> InstallLock? {
+        for attempt in 0..<5 {
+            try Task.checkCancellation()
+            if let held = InstallLock(file) { return held }
+            if attempt < 4 { try await betweenAttempts() }
+        }
+        return nil
     }
 
     /// The store lock, waited for until it is free. Throws only when the caller is cancelled — and

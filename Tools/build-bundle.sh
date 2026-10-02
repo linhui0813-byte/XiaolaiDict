@@ -552,18 +552,19 @@ verify_signatures() {
 # a genuinely bad identity or a malformed bundle must still fail loudly rather than after five
 # silent tries.
 sign_part() {  # $1: the timestamp option; $2: the code object to sign
-    local stamp=$1 part=$2 attempt
+    local stamp=$1 part=$2 attempt tries=1
+    [ "$stamp" != --timestamp ] || tries=$SIGN_TRIES
     local arguments=(--force --options runtime "$stamp" --sign "$XIAOLAIDICT_SIGN_ID")
     if [ "$LOCAL_BUILD" = 1 ] && [ "$XIAOLAIDICT_SIGN_ID" != - ]; then
         arguments+=(--keychain "$LOCAL_KEYCHAIN")
     fi
-    for (( attempt = 1; attempt <= SIGN_TRIES; attempt++ )); do
-        if (( attempt == SIGN_TRIES )); then
+    for (( attempt = 1; attempt <= tries; attempt++ )); do
+        if (( attempt == tries )); then
             codesign "${arguments[@]}" "$part" >/dev/null
             return
         fi
-        codesign "${arguments[@]}" "$part" >/dev/null 2>&1 && return
-        note "signing $(basename "$part") failed on attempt $attempt of $SIGN_TRIES — retrying"
+        codesign "${arguments[@]}" "$part" >/dev/null && return
+        note "signing $(basename "$part") failed on attempt $attempt of $tries — retrying"
         sleep $(( attempt * 2 ))
     done
 }

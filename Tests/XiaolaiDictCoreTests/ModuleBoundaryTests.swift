@@ -97,7 +97,7 @@ struct ModuleBoundaryTests {
     /// testable without a window server, and the segfault-prone DictionaryServices calls stay behind
     /// the XPC boundary only while the targets on this side of it have no reason to draw.
     @Test func nothingBelowTheViewLayerBindsAppKitOrSwiftUI() throws {
-        let forbidden = ["AppKit", "SwiftUI", "UIKit", "QuartzCore", "WebKit"]
+        let forbidden = Set(["AppKit", "SwiftUI", "UIKit", "QuartzCore", "WebKit"]).union(Self.viewLayer)
         var offenders: [String] = []
         for target in Self.allowed.keys.sorted() {
             for (file, imports) in try Self.imports(of: target) {
@@ -186,14 +186,42 @@ struct ModuleBoundaryTests {
     /// `SourceScan` for the reason it strips them: a doc comment naming `AppKit` is not an import.
     private static func imports(of target: String) throws -> [(file: String, modules: [String])] {
         let root = repository.appending(path: "Sources").appending(path: target)
-        let line = try Regex(#"^\s*(?:@preconcurrency\s+|@_implementationOnly\s+)?import\s+([A-Za-z_][A-Za-z0-9_.]*)"#)
         return try SourceScan.code(under: root).map { file, code in
-            let modules = code.components(separatedBy: "\n").compactMap { row -> String? in
-                guard let match = try? line.firstMatch(in: row) else { return nil }
-                return String(match.output[1].substring ?? "")
-            }
-            return (file.lastPathComponent, modules)
+            (file.lastPathComponent, try importedModules(in: code))
         }
+    }
+
+    /// Attributes and access levels still bind a module; selective imports name a symbol after it.
+    /// Preserve submodules such as Carbon.HIToolbox rather than treating them as symbols.
+    private static func importedModules(in code: String) throws -> [String] {
+        let line = try Regex(#"^\s*(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^)]*\))?\s+)*(?:(?:public|package|internal|fileprivate|private)\s+)?import\s+(?:(typealias|struct|class|enum|protocol|let|var|func)\s+)?([A-Za-z_][A-Za-z0-9_.]*)"#)
+        return code.components(separatedBy: "\n").compactMap { row -> String? in
+            guard let match = try? line.firstMatch(in: row) else { return nil }
+            let path = String(match.output[2].substring ?? "")
+            guard match.output[1].substring != nil else { return path }
+            return path.components(separatedBy: ".").dropLast().joined(separator: ".")
+        }
+    }
+
+    @Test(arguments: [
+        ("import AppKit", "AppKit"),
+        ("@_exported import AppKit", "AppKit"),
+        ("@preconcurrency @_implementationOnly import AppKit", "AppKit"),
+        ("public import SwiftUI", "SwiftUI"),
+        ("package import AppKit", "AppKit"),
+        ("@_spi(Internal) import Foundation", "Foundation"),
+        ("import class AppKit.NSWindow", "AppKit"),
+        ("import func Darwin.sin", "Darwin"),
+        ("import Carbon.HIToolbox", "Carbon.HIToolbox"),
+        ("import var Carbon.HIToolbox.kVK_ANSI_A", "Carbon.HIToolbox"),
+        ("import func Swift.+", "Swift"),
+    ])
+    func everyImportSpellingIdentifiesItsModule(declaration: String, module: String) throws {
+        #expect(try Self.importedModules(in: declaration) == [module])
+    }
+
+    @Test func aCommentOrOrdinaryCodeIsNotAnImport() throws {
+        #expect(try Self.importedModules(in: "// import AppKit\nlet message = \"import SwiftUI\"") == [])
     }
 
     /// The target names `Package.swift` declares.

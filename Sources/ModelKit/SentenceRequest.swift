@@ -68,7 +68,7 @@ public struct SentenceQuestion: Codable, Sendable, Equatable {
     public func prompt(for tier: ExplainerTier) -> String {
         var lines = [
             "Sentence: \(ModelPrompt.flattened(sentence, limit: ModelPrompt.sentenceCharacterLimit))",
-            "Word: \(term)",
+            "Word: \(ModelPrompt.flattened(term, limit: ModelPrompt.selectedTextCharacterLimit))",
         ]
         if tier.maySeeDictionaryText, let senseText, !senseText.isEmpty {
             lines.append("Dictionary sense: \(ModelPrompt.flattened(senseText, limit: ModelPrompt.translatedSenseLimit)) (optional hint; ignore it unless it fits this sentence)")

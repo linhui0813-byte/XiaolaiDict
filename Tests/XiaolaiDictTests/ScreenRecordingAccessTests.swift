@@ -84,9 +84,19 @@ struct ScreenRecordingAccessTests {
     /// The count is the assertion. Returning `.declined` while still prompting satisfies any test
     /// that reads only the result, and the prompt is the whole of what the reader sees.
     @Test func acancelledLookupNeverRaisesAPrompt() async {
-        let (permission, counter) = access(.declined, grantedByAsking: true)
+        let entered = AsyncStream<Void>.makeStream()
+        let released = AsyncStream<Void>.makeStream()
+        defer { entered.continuation.finish(); released.continuation.finish() }
+        let counter = Counter()
+        let permission = ScreenRecordingAccess(probe: {
+            entered.continuation.yield(())
+            for await _ in released.stream { break }
+            return .declined
+        }, request: { counter.bump(); return true })
         let task = Task { await permission.ensure() }
+        for await _ in entered.stream { break }
         task.cancel()
+        released.continuation.finish()
         _ = await task.value
         #expect(counter.asks == 0, "an abandoned hover put a permission dialog on the screen")
     }

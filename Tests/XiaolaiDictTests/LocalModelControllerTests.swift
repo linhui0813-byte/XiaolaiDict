@@ -3,6 +3,7 @@ import Foundation
 @testable import ModelKit
 import Testing
 @testable import XiaolaiDict
+import XiaolaiDictBase
 @testable import XiaolaiDictCore
 import XiaolaiDictTestSupport
 @testable import XiaolaiDictUI
@@ -124,13 +125,126 @@ struct LocalModelControllerTests {
     @Test func theServiceIsEndedBeforeReadyIsSaid() async {
         let (controller, _) = controller()
         let seen = Recorder<[LocalModelState]>([])
-        controller.onInstalled = { seen.withLock { $0.append(controller.state) } }
+        let held = Recorder<Bool>(false)
+        controller.onModelArrived = { held.withLock { $0 = true } }
+        controller.onInstalled = {
+            #expect(held.withLock { $0 }, "the old service was not held before unloading it")
+            seen.withLock { $0.append(controller.state) }
+        }
         controller.startDownload(.standard)
         await settle(controller)
         #expect(controller.state == .ready(.standard))
         let during = seen.withLock { $0 }
         #expect(during.count == 1)
         #expect(during.first?.isDownloading == true, "ready was said before the old service was ended")
+    }
+
+    @Test func anExternalModelIsHeldBeforeReadyIsPublished() async throws {
+        let (controller, store) = controller()
+        try await ModelDownloader(store: store, transport: Transport(fails: false), freeDisk: { _ in .max })
+            .install(Self.manifest(.standard))
+        let before = Recorder<[LocalModelState]>([])
+        controller.onModelArrived = { before.withLock { $0.append(controller.state) } }
+        controller.refresh()
+        #expect(before.withLock { $0 } == [.notDownloaded], "the old service was not held before publishing ready")
+        #expect(controller.state == .ready(.standard))
+        await controller.pruning?.value
+    }
+
+    @Test func theInstalledLicenceRemainsAvailableDuringAndAfterAFailedUpgrade() async throws {
+        let (first, store) = controller()
+        first.startDownload(.standard)
+        await settle(first)
+        let licence = try #require(first.licenceURL)
+        let upgrade = LocalModelController(
+            defaults: TemporaryDefaults.suite(), store: store, physicalMemory: 48 * Self.gigabyte,
+            transport: Transport(fails: true), probe: FixedProbe(), manifest: Self.manifest)
+        upgrade.startDownload(.large)
+        #expect(upgrade.state.isDownloading)
+        #expect(upgrade.licenceURL == licence)
+        await settle(upgrade)
+        guard case .stopped = upgrade.state else { Issue.record("the fixture upgrade did not fail"); return }
+        #expect(upgrade.licenceURL == licence)
+        let stopped = upgrade.state
+        upgrade.refresh()
+        #expect(upgrade.state == stopped, "refresh erased the failed upgrade while the old model remained")
+        #expect(upgrade.choice.canDownload)
+        #expect(upgrade.licenceURL == licence)
+    }
+
+    @Test func aRemovedModelIsNotRestoredByDownloadProgressOrFailure() async throws {
+        let (installer, store) = controller()
+        installer.startDownload(.standard)
+        await settle(installer)
+        let (entered, began) = AsyncStream<Void>.makeStream()
+        let (release, resume) = AsyncStream<Void>.makeStream()
+        defer { resume.finish(); began.finish() }
+        let upgrade = LocalModelController(
+            defaults: TemporaryDefaults.suite(), store: store, physicalMemory: 48 * Self.gigabyte,
+            transport: WaitingTransport(began: began, release: release), probe: FixedProbe(), manifest: Self.manifest)
+        await upgrade.pruning?.value
+        upgrade.startDownload(.large)
+        #expect(upgrade.state.answering == .standard)
+        try store.remove(Self.manifest(.standard))
+        upgrade.refresh()
+        #expect(upgrade.state.isDownloading)
+        #expect(upgrade.state.answering == nil)
+        try await withDeadline(.seconds(5)) {
+            _ = await entered.first { @Sendable _ in true }
+        }
+        // Wait for the observable callback, not for an assumed scheduling delay.
+        for _ in 0..<100 {
+            if case .downloading(let progress, _, _) = upgrade.state, progress.received == progress.total { break }
+            await Task.yield()
+        }
+        guard case .downloading(let progress, let size, let replacing) = upgrade.state else {
+            Issue.record("the fixture transfer did not remain paused"); return
+        }
+        #expect(progress.received == progress.total)
+        #expect(size == .large)
+        #expect(replacing == nil, "a progress callback restored the deleted model")
+        upgrade.cancelDownload()
+        resume.yield(())
+        resume.finish()
+        await settle(upgrade)
+        guard case .stopped = upgrade.state else { Issue.record("the paused fixture did not fail"); return }
+        #expect(upgrade.state.answering == nil, "failure publication restored the deleted model")
+    }
+
+    struct WaitingTransport: ModelFileTransport {
+        let began: AsyncStream<Void>.Continuation
+        let release: AsyncStream<Void>
+
+        func fetch(
+            _ file: ModelFile, from offset: Int64, on host: ModelHost, appendingTo destination: URL,
+            progress: @escaping @Sendable (Int64) -> Void
+        ) async throws {
+            try await Transport(fails: false).fetch(file, from: offset, on: host, appendingTo: destination, progress: progress)
+            if file.path == ModelManifest.licenceFileName {
+                began.yield(())
+                for await _ in release.prefix(1) {}
+                throw CancellationError()
+            }
+        }
+    }
+
+    @Test func coordinatorMemoryGatesAgreeWithItsSetupBoard() async throws {
+        let (store, scratch) = try ModelClientTests.storeWithAModel()
+        scratches.withLock { $0.append(scratch) }
+        let service = ModelClientTests.Service()
+        let tiny = LocalModelCoordinator(
+            defaults: TemporaryDefaults.suite(), store: store, client: ModelClient(connect: { service.connect($0) }),
+            transport: Transport(fails: true), probe: FixedProbe(), physicalMemory: 8 * Self.gigabyte)
+        let roomy = LocalModelCoordinator(
+            defaults: TemporaryDefaults.suite(), store: store,
+            transport: Transport(fails: true), probe: FixedProbe(), physicalMemory: 48 * Self.gigabyte)
+        #expect(tiny.choice.state == .tooLittleMemory)
+        #expect(!tiny.translationActions.canTranslateWords)
+        #expect(roomy.choice.state == .ready(.standard))
+        #expect(roomy.translationActions.canTranslateWords)
+        await tiny.prewarm()
+        #expect(service.sessions.withLock { $0 } == 0)
+        await roomy.pruning?.value
     }
 
     /// A stopped download keeps saying why when the board re-reads the store.
@@ -394,6 +508,28 @@ struct LocalModelControllerTests {
         for _ in 0..<5 { #expect(order.isNewest(order.next())) }
     }
 
+    @Test func aRestartResetsTheProgressThrottleWithoutRemovingItsChunkLimit() {
+        let throttle = ProgressThrottle()
+        #expect(throttle.shouldPublish(ModelDownloadProgress(received: 800, total: 1_000)))
+        #expect(throttle.shouldPublish(ModelDownloadProgress(received: 100, total: 1_000)),
+                "a restarted download was hidden behind its previous byte count")
+        #expect(!throttle.shouldPublish(ModelDownloadProgress(received: 101, total: 1_000)))
+        #expect(throttle.shouldPublish(ModelDownloadProgress(received: 102, total: 1_000)))
+        #expect(throttle.shouldPublish(ModelDownloadProgress(received: 1_000, total: 1_000)))
+    }
+
+    @Test func removingTheOnlyModelRefreshesTheBoardAndOffersAnotherDownload() async {
+        let (controller, store) = controller()
+        controller.startDownload(.standard)
+        await settle(controller)
+        #expect(controller.state == .ready(.standard))
+        controller.remove(.standard)
+        await controller.removal?.value
+        #expect(store.installed(Self.manifest(.standard)) == nil)
+        #expect(controller.state == .notDownloaded)
+        #expect(controller.choice.canDownload, "removing the last model left the download disabled")
+    }
+
     /// **A reader with two models can switch between them, and switching keeps both.** This is
     /// the whole point: before, the larger download deleted the smaller, so "switching" meant
     /// three gigabytes and an hour — ADR-0041.
@@ -432,9 +568,7 @@ struct LocalModelControllerTests {
         #expect(controller.choice.answering.answering == .standard)
 
         controller.choice.removeModel(.standard)
-        for _ in 0..<200 where store.installed(Self.manifest(.standard)) != nil {
-            try? await Task.sleep(for: .milliseconds(10))
-        }
+        await controller.removal?.value
         #expect(store.installed(Self.manifest(.standard)) == nil, "the board's Remove reached nothing")
     }
 
@@ -477,9 +611,7 @@ struct LocalModelControllerTests {
         controller.choose(.large)
 
         controller.remove(.large)
-        for _ in 0..<200 where store.installed(Self.manifest(.large)) != nil {
-            try? await Task.sleep(for: .milliseconds(10))
-        }
+        await controller.removal?.value
         #expect(store.installed(Self.manifest(.large)) == nil, "the model was not removed")
         #expect(controller.wanted == nil, "a choice was kept for a model that is gone")
         #expect(store.installed(Self.manifest(.standard)) != nil, "removing one took the other")

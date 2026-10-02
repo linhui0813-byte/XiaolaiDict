@@ -81,7 +81,12 @@ case "2b4bit": ModelManifest.qwen35TwoBExperiment
 default: LocalModelSize.standard.manifest
 }
 let store = option("--store").map { ModelStore(root: URL(filePath: $0)) } ?? .standard()
-let examples = try JSONDecoder().decode([Example].self, from: Data(contentsOf: URL(filePath: file)))
+let examples: [Example]
+do {
+    examples = try JSONDecoder().decode([Example].self, from: Data(contentsOf: URL(filePath: file)))
+} catch {
+    emit(["error": "the benchmark cases could not be read or decoded"], code: 64)
+}
 guard !examples.isEmpty, Set(examples.map(\.id)).count == examples.count,
       examples.allSatisfy({ ["word", "sense", "explanation", "sentence"].contains($0.kind)
           && (!["word", "explanation"].contains($0.kind) || $0.word?.isEmpty == false)

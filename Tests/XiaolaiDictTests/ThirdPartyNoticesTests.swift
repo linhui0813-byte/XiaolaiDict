@@ -101,6 +101,32 @@ struct ThirdPartyNoticesTests {
         #expect(try String(contentsOf: output, encoding: .utf8).contains("Permission is hereby granted"))
     }
 
+    @Test(arguments: ["LICENSE.extra", "LICENSE-3RD-PARTY"])
+    func everyRootLicenceIsRetainedInAStableOrder(filename: String) throws {
+        let scratch = TemporaryDirectory(named: "xiaolaidict-notices")
+        let checkout = scratch.appending(".build/checkouts/pretend-package")
+        try FileManager.default.createDirectory(at: checkout, withIntermediateDirectories: true)
+        let state: [String: Any] = ["object": ["dependencies": [[
+            "packageRef": ["identity": "pretend-package", "location": "https://example.invalid/pretend"],
+            "state": ["checkoutState": ["version": "1.0.0"]], "subpath": "pretend-package",
+        ]]]]
+        try JSONSerialization.data(withJSONObject: state)
+            .write(to: scratch.appending(".build/workspace-state.json"))
+        let first = "Copyright 2026. Terms for the first component.\n"
+        let second = "Copyright 2026. Terms for the second component.\n"
+        try Data(first.utf8).write(to: checkout.appending(path: "COPYING"))
+        try Data(second.utf8).write(to: checkout.appending(path: filename))
+        let output = scratch.appending("ThirdPartyNotices.txt")
+        let run = try generate(in: scratch.url, into: output)
+        try #require(run.status == 0, "the generator failed: \(run.errors)")
+        let notices = try String(contentsOf: output, encoding: .utf8)
+        let firstRange = try #require(notices.range(of: first))
+        let secondRange = try #require(notices.range(of: second))
+        #expect(firstRange.lowerBound < secondRange.lowerBound)
+        #expect(notices.contains("COPYING — pretend-package"))
+        #expect(notices.contains("\(filename) — pretend-package"))
+    }
+
     /// The notices are one of the bundle's inputs, and the bundle is rebuilt when a digest of its
     /// inputs changes — so a generator whose output reordered itself would re-sign the app for
     /// nothing, on every build.
