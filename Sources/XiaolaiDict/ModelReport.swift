@@ -18,6 +18,9 @@ enum ModelReport {
     /// "The service started" and "the service can run MLX" are different claims: with the Metal
     /// library in the wrong place it starts, gets a device, and dies on its first array.
     static func status(write: (String) -> Bool = LookupCommand.writeLine) async -> CommandStatus {
+        #if HUIDICT_LOCAL_BUILD
+        return DeepSeekReport.status(write: write)
+        #else
         guard case .status(let status)? = await ModelClient().ask(.status) else {
             // Whether that line landed changes nothing: the run has already failed, and the exit
             // code says so whether or not the harness could be told why.
@@ -31,6 +34,7 @@ enum ModelReport {
         ]
         guard Instrument.write(report, to: write) else { return .internalError }
         return status.gpu == nil ? .failure : .success
+        #endif
     }
 
     static func unload() async -> CommandStatus {
@@ -55,7 +59,11 @@ enum ModelReport {
             if let measurement {
                 ok = try await measurement(&report)
             } else {
+                #if HUIDICT_LOCAL_BUILD
+                ok = try await DeepSeekReport.measure(into: &report)
+                #else
                 ok = try await measure(into: &report)
+                #endif
             }
         } catch is CancellationError {
             return .interrupted

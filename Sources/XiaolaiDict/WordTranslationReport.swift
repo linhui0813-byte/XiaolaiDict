@@ -7,7 +7,7 @@ import XiaolaiDictCore
 @MainActor
 enum WordTranslationReport {
     static func run() async -> CommandStatus {
-        let models = LocalModelAccess(client: ModelClient(), store: .standard())
+        let models = LocalModelAccess.production()
         guard models.isInstalled else {
             _ = Instrument.write(["installed": false], to: LookupCommand.writeLine)
             return .failure
@@ -54,7 +54,7 @@ enum WordTranslationReport {
         let sentence = "The application was not refused."
         let outcome = await models.translator.translate(TranslationQuestion(sentence: sentence, target: "zh-Hans"))
         let text: String
-        if case .translated(let answer, by: .localModel) = outcome { text = answer } else { text = "" }
+        if case .translated(let answer, by: models.translationEngine) = outcome { text = answer } else { text = "" }
         let negation = ["未", "没有", "没", "并非", "不"].contains(where: text.contains)
         passed = passed && negation && text.contains("拒")
         rows.append(["sentence": sentence, "translation": text, "preservesNegation": negation])
@@ -64,7 +64,7 @@ enum WordTranslationReport {
                                           met: .init(term: "approach", sense: "something similar"), wordContext: context)
         let hintedOutcome = await models.translator.translate(hinted)
         let hintedText: String
-        if case .translated(let answer, by: .localModel) = hintedOutcome { hintedText = answer }
+        if case .translated(let answer, by: models.translationEngine) = hintedOutcome { hintedText = answer }
         else { hintedText = "" }
         let usesContext = ["方法", "方式", "方案"].contains(where: hintedText.contains)
             && WordTranslationGloss(hintedText)?.meanings.map(\.partOfSpeech) == [.noun]
@@ -79,7 +79,7 @@ enum WordTranslationReport {
         let explainsUse = ["方法", "方式", "方案"].contains(where: explained.contains)
         passed = passed && explainsUse
         rows.append(["sentence": context, "explanation": explained, "explainsContextInChinese": explainsUse])
-        guard Instrument.write(["installed": true, "cases": rows, "passed": passed], to: LookupCommand.writeLine)
+        guard Instrument.write(["installed": true, "provider": models.deepSeek == nil ? "qwen" : "deepseek", "cases": rows, "passed": passed], to: LookupCommand.writeLine)
         else { return .internalError }
         return passed ? .success : .failure
     }

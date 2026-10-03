@@ -198,6 +198,9 @@
     "A word you look up on more than one day appears here." : {
 
     },
+    "API key needed" : {
+
+    },
     "About" : {
 
     },
@@ -322,6 +325,9 @@
     "Confirm the meaning" : {
 
     },
+    "Context model" : {
+
+    },
     "Copies you made yourself — Time Machine, an exported file, anything you duplicated — are not affected and cannot be reached from here." : {
 
     },
@@ -332,6 +338,12 @@
 
     },
     "Copy translation" : {
+
+    },
+    "DeepSeek API" : {
+
+    },
+    "DeepSeek translates words and sentences, picks contextual meanings, and explains usage. Lookup text and bounded meaning hints are sent to DeepSeek. Internet access and API credit are required. The local Qwen model is disabled." : {
 
     },
     "Delete %lld lookups" : {
@@ -490,6 +502,9 @@
     "Hugging Face" : {
 
     },
+    "In context · DeepSeek" : {
+
+    },
     "In context · Qwen" : {
 
     },
@@ -515,6 +530,9 @@
 
     },
     "Key" : {
+
+    },
+    "Key configured" : {
 
     },
     "Korean" : {
@@ -1283,6 +1301,9 @@
     "Without a local model, senses are picked by a simpler match. Sentences are translated by Apple where its language pack is installed — which cannot be told which sense you met, and misreads some." : {
 
     },
+    "Word translation · DeepSeek" : {
+
+    },
     "Word translation · Qwen" : {
 
     },
@@ -1294,6 +1315,9 @@
     },
     "Words you look up appear here, grouped by the day you met them." : {
       "comment" : "Drawer notice when nothing has been looked up yet"
+    },
+    "Words, surrounding text, and bounded meaning hints are sent to DeepSeek. The local Qwen model is disabled." : {
+
     },
     "XiaolaiDict needs Accessibility access" : {
       "comment" : "Lookup panel, when Accessibility has not been granted"

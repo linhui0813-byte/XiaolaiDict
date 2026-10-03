@@ -873,6 +873,13 @@ struct AboutPane: View {
 
     /// Which model, whose, and under what terms — named whether or not it is downloaded.
     @ViewBuilder private var localModel: some View {
+        #if HUIDICT_LOCAL_BUILD
+        Section("Context model") {
+            LabeledContent("Model") { Text(verbatim: "DeepSeek Flash (API)") }
+            Text("Words, surrounding text, and bounded meaning hints are sent to DeepSeek. The local Qwen model is disabled.")
+            Link("DeepSeek API", destination: URL(string: "https://api-docs.deepseek.com/")!)
+        }
+        #else
         Section("Local model") {
             LabeledContent("Model") { Text(verbatim: LocalModelAttribution.family) }
             LabeledContent("Made by") { Text(verbatim: LocalModelAttribution.publisher) }
@@ -892,6 +899,7 @@ struct AboutPane: View {
                     .foregroundStyle(.secondary)
             }
         }
+        #endif
     }
 
     /// What the app itself is built from. Both licences the dependencies carry — MIT and

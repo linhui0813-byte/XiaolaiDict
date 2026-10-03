@@ -154,6 +154,7 @@ public struct SetupBoard: Equatable, Sendable {
         // ask of its reader: a row that stayed "needed" there could never be settled at all.
         case .localModel:
             switch model {
+            case .api(let configured): configured
             case .ready: true
             // A Mac that cannot hold the model has nothing to settle — see `isAvailable`, which is
             // what keeps the row from drawing a tick over something the reader never got. Nor does

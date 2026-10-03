@@ -28,13 +28,15 @@ public struct LadderSentenceExplainer: SentenceExplaining {
     /// One round trip to the model service; nil where it could not be reached at all.
     public typealias Local = @Sendable (SentenceQuestion) async -> ModelReply?
 
-    public let tier = ExplainerTier.onDevice
+    public let tier: ExplainerTier
     private let local: Local
     private let apple: any SentenceExplaining
 
-    public init(local: @escaping Local, apple: any SentenceExplaining = OnDeviceSentenceExplainer()) {
+    public init(local: @escaping Local, apple: any SentenceExplaining = OnDeviceSentenceExplainer(),
+                tier: ExplainerTier = .onDevice) {
         self.local = local
         self.apple = apple
+        self.tier = tier
     }
 
     /// Where a disagreement with the model service goes instead of into a trap. The rung runs in the

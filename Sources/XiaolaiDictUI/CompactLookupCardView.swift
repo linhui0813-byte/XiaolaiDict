@@ -121,8 +121,13 @@ struct CompactLookupCardView: View {
                         .fixedSize(horizontal: false, vertical: true)
                     }
                     Group {
+                        #if HUIDICT_LOCAL_BUILD
+                        if hasWordContext { Text("In context · DeepSeek") }
+                        else { Text("Word translation · DeepSeek") }
+                        #else
                         if hasWordContext { Text("In context · Qwen") }
                         else { Text("Word translation · Qwen") }
+                        #endif
                     }
                     .font(.system(size: scale.text.small))
                     .foregroundStyle(.secondary)

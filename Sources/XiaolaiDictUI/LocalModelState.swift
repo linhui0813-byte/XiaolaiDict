@@ -8,6 +8,8 @@ import ModelKit
 /// a view holds is a snapshot with a known refresh point rather than a cache with none. `refresh()`
 /// is that point; `answering` reports what is installed, not that the service can answer right now.
 public enum LocalModelState: Equatable, Sendable {
+    /// DeepSeek replaces the local model in HuiDict. This is credential presence, not API health.
+    case api(configured: Bool)
     /// Nothing is downloaded, and the Mac can take a model.
     case notDownloaded
     /// `replacing` is the size already installed and still answering — an upgrade to 9B is not the
@@ -33,7 +35,7 @@ public enum LocalModelState: Equatable, Sendable {
         switch self {
         case .ready(let size): size
         case .downloading(_, _, let replacing), .stopped(_, _, let replacing): replacing
-        case .notDownloaded, .tooLittleMemory: nil
+        case .notDownloaded, .tooLittleMemory, .api: nil
         }
     }
 }
@@ -140,7 +142,7 @@ public struct LocalModelChoice {
         switch state {
         case .stopped(_, let size, _): return offered.contains(size) ? size : nil
         case .notDownloaded: return recommended.flatMap { offered.contains($0) ? $0 : nil }
-        case .downloading, .ready, .tooLittleMemory: return nil
+        case .downloading, .ready, .tooLittleMemory, .api: return nil
         }
     }
 

@@ -49,7 +49,7 @@ enum SenseReport {
 
     static func run(
         write: (String) -> Bool = LookupCommand.writeLine,
-        models: LocalModelAccess = LocalModelAccess(client: ModelClient(), store: .standard()),
+        models: LocalModelAccess = LocalModelAccess.production(),
         rungs measuring: [(name: String, selector: any SenseSelecting)]? = nil,
         cases: [LabelledCase] = LabelledSenses.hardCases,
         candidates: CandidateSource? = nil,
@@ -255,6 +255,10 @@ enum SenseReport {
     /// `loaded` would read false on every run that worked.
     private static func measuredModel(_ models: LocalModelAccess) async -> MeasuredModel {
         let installed = models.isInstalled
+        if models.deepSeek != nil {
+            return MeasuredModel(installed: installed, size: nil, loaded: false,
+                                 identifier: DeepSeekConfiguration.model)
+        }
         guard case .status(let status)? = await models.ask(.status) else {
             return MeasuredModel(installed: installed, size: nil, loaded: false, identifier: nil)
         }

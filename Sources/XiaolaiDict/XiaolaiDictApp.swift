@@ -43,7 +43,7 @@ final class XiaolaiDictApp: NSObject, NSApplicationDelegate {
     /// suite stayed green because tests call the initializer Swift can see.
     override convenience init() {
         // The one place the real model directory and the real XPC service are reached for.
-        self.init(defaults: .standard, models: LocalModelCoordinator(defaults: .standard))
+        self.init(defaults: .standard, models: LocalModelCoordinator.production(defaults: .standard))
     }
 
     /// `defaults` is a parameter so a test can be given a suite of its own. Without it, asserting

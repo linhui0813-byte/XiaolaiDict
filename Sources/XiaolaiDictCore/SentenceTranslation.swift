@@ -7,6 +7,7 @@ import NaturalLanguage
 public enum TranslationEngine: String, Sendable, Codable, CaseIterable {
     /// Qwen, on this Mac, told which sense the reader met.
     case localModel
+    case deepSeek
     /// Apple's Translation framework: no download, and **measured to be the weaker engine** — it
     /// takes no instructions, so it cannot be told the sense, and on eight hard sentences it got
     /// four right, rendering *table … until next month* as 提交, the opposite.
@@ -46,12 +47,15 @@ public struct SentenceTranslator: Sendable {
     private let local: Local
     private let apple: Apple
     private let language: @Sendable (String) -> String?
+    private let modelEngine: TranslationEngine
 
     public init(local: @escaping Local, apple: @escaping Apple,
-                language: @escaping @Sendable (String) -> String? = SentenceLanguage.dominant) {
+                language: @escaping @Sendable (String) -> String? = SentenceLanguage.dominant,
+                modelEngine: TranslationEngine = .localModel) {
         self.local = local
         self.apple = apple
         self.language = language
+        self.modelEngine = modelEngine
     }
 
     /// **The sentence's own language, as this translator reads it.**
@@ -84,7 +88,7 @@ public struct SentenceTranslator: Sendable {
         guard !Task.isCancelled else { return .unavailable }
         if case .translation(let text)? = answer,
            TranslationCheck.isTranslation(text, for: question) {
-            return .translated(text, by: .localModel)
+            return .translated(text, by: modelEngine)
         }
         // Apple's translator cannot use the surrounding sentence to translate only a selected word.
         // Keep the dictionary preview when Qwen cannot answer rather than label a context-free guess.

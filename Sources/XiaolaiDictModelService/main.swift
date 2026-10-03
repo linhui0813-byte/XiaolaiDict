@@ -1,3 +1,8 @@
+#if HUIDICT_LOCAL_BUILD
+import Darwin
+// HuiDict permanently disables the local Qwen runtime, even if its legacy service is invoked.
+exit(0)
+#else
 import Foundation
 import FoundationModels
 import LocalModel
@@ -156,3 +161,5 @@ func exitOnce(_ closed: @autoclosure () -> Bool, code: Int32 = 0) async {
 
 log.notice("model service listening")
 withExtendedLifetime(listener) { dispatchMain() }
+
+#endif

@@ -57,8 +57,13 @@ actor ModelClient {
 
     init(
         connect: @escaping Connect = { onCancel in
+            #if HUIDICT_LOCAL_BUILD
+            // HuiDict permanently uses the API. No missing key or failed API call may start Qwen.
+            throw ModelFailure.notInstalled
+            #else
             try XPCServiceTransport<ModelRequest, ModelReply>(
                 service: XiaolaiDictIdentity.modelService, onCancel: onCancel)
+            #endif
         },
         servicePresence: @escaping @Sendable () -> ModelServiceProcess.Presence = { ModelServiceProcess.presence },
         shutdownLimit: Duration = ModelShutdown.processExit
@@ -200,21 +205,35 @@ struct LocalModelAccess: Sendable {
     var physicalMemory: UInt64 = SystemMemory.physical
     /// Set while a replaced model's service is still running — see `ModelQuarantine`.
     var quarantine = ModelQuarantine()
+    var deepSeek: DeepSeekClient? = nil
+
+    static func production() -> LocalModelAccess {
+        #if HUIDICT_LOCAL_BUILD
+        LocalModelAccess(client: ModelClient(), store: .standard(), deepSeek: DeepSeekClient())
+        #else
+        LocalModelAccess(client: ModelClient(), store: .standard())
+        #endif
+    }
+
+    var translationEngine: TranslationEngine { deepSeek == nil ? .localModel : .deepSeek }
 
     /// **Only a size this Mac is offered counts.** A model copied from a larger Mac is on disk and
     /// the service will refuse it for want of memory — so counting it here started a service on
     /// every lookup only to be told "not installed", and disagreed with the row the reader sees.
     var isInstalled: Bool {
-        !store.installedManifests(
+        if let deepSeek { return deepSeek.isConfigured }
+        return !store.installedManifests(
             among: ModelSizing.offered(physicalMemory: physicalMemory).map(\.manifest)).isEmpty
     }
 
     func ask(_ request: ModelRequest) async -> ModelReply? {
+        if let deepSeek { return await deepSeek.ask(request) }
         guard isInstalled, !quarantine.isHeld else { return .failure(.notInstalled) }
         return await client.ask(request)
     }
 
     func prewarm() async {
+        guard deepSeek == nil else { return }
         guard isInstalled, !quarantine.isHeld else { return }
         await client.prewarmOnce()
     }
@@ -228,7 +247,7 @@ struct LocalModelAccess: Sendable {
     /// measurement cannot drift from what readers get.
     var senseLadder: (ladder: LadderSenseSelector, rungs: [(name: String, selector: any SenseSelecting)]) {
         let rungs: [(name: String, selector: any SenseSelecting)] = [
-            ("localModel", senseSelector),
+            (deepSeek == nil ? "localModel" : "deepSeek", senseSelector),
             ("onDevice", FoundationModelsSenseSelector()),
             ("embedding", EmbeddingSenseSelector()),
         ]
@@ -239,14 +258,16 @@ struct LocalModelAccess: Sendable {
     /// does not answer** — not downloaded, not enough memory, declined, a generation that failed,
     /// a reply of the wrong shape, or no service at all.
     var explainer: LadderSentenceExplainer {
-        LadderSentenceExplainer(local: { question in await ask(.explain(question)) })
+        LadderSentenceExplainer(local: { question in await ask(.explain(question)) },
+                               tier: deepSeek == nil ? .onDevice : .remote)
     }
 
     /// The translation pane's engines: this model first, Apple's framework where it is not here.
     var translator: SentenceTranslator {
         SentenceTranslator(
             local: { question in await ask(.translate(question)) },
-            apple: { sentence, source, target in await AppleTranslation.translate(sentence, from: source, to: target) })
+            apple: { sentence, source, target in await AppleTranslation.translate(sentence, from: source, to: target) },
+            modelEngine: translationEngine)
     }
 }
 

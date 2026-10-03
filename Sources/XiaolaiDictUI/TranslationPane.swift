@@ -66,7 +66,7 @@ public struct TranslationPane: Equatable {
     public init(_ outcome: TranslationOutcome, of key: Key) {
         of = key
         switch outcome {
-        case .translated(let text, by: .localModel):
+        case .translated(let text, by: .localModel), .translated(let text, by: .deepSeek):
             body = .text(text)
             caveat = nil
             offersDownload = false

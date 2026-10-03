@@ -18,9 +18,22 @@ import os
 final class LocalModelCoordinator {
     /// Private on purpose: everything the app needs is a named operation below. Reached directly,
     /// the client would answer questions without the unload-before-ready lifecycle around it.
-    private let controller: LocalModelController
+    private let controller: LocalModelController?
     @ObservationIgnored private let access: LocalModelAccess
     @ObservationIgnored private let log = Logger(subsystem: XiaolaiDictIdentity.app, category: "model")
+
+    static func production(defaults: UserDefaults) -> LocalModelCoordinator {
+        #if HUIDICT_LOCAL_BUILD
+        LocalModelCoordinator(deepSeek: DeepSeekClient())
+        #else
+        LocalModelCoordinator(defaults: defaults)
+        #endif
+    }
+
+    init(deepSeek: DeepSeekClient) {
+        controller = nil
+        access = LocalModelAccess(client: ModelClient(), store: .standard(), deepSeek: deepSeek)
+    }
 
     init(
         defaults: UserDefaults, store: ModelStore = .standard(), client: ModelClient = ModelClient(),
@@ -28,9 +41,10 @@ final class LocalModelCoordinator {
         probe: any ModelHostProbe = URLSessionModelHostProbe(),
         physicalMemory: UInt64 = SystemMemory.physical
     ) {
-        controller = LocalModelController(
+        let controller = LocalModelController(
             defaults: defaults, store: store, physicalMemory: physicalMemory,
             transport: transport, probe: probe)
+        self.controller = controller
         access = LocalModelAccess(client: client, store: store, physicalMemory: physicalMemory)
         // A new model is answered from only once the service holding the old one has gone.
         //
@@ -61,16 +75,21 @@ final class LocalModelCoordinator {
     }
 
     /// What the setup board's row reads and acts through.
-    var choice: LocalModelChoice { controller.choice }
+    var choice: LocalModelChoice {
+        if let controller { return controller.choice }
+        return LocalModelChoice(
+            state: .api(configured: access.isInstalled), declined: false, offered: [], recommended: nil,
+            download: { _ in }, decline: {}, cancel: {})
+    }
     /// The model's licence, where a model is downloaded — what About names.
-    var licenceURL: URL? { controller.licenceURL }
+    var licenceURL: URL? { controller?.licenceURL }
 
     /// Re-reads the store. Called where the reader looks: the board opening, and the menu.
-    func refresh() { controller.refresh() }
+    func refresh() { controller?.refresh() }
 
     /// The prune the last `refresh()` started — see `LocalModelController.pruning`. Forwarded so a
     /// caller holding only the coordinator can still wait for work `refresh()` does not await.
-    var pruning: Task<Void, Never>? { controller.pruning }
+    var pruning: Task<Void, Never>? { controller?.pruning }
 
     /// The shipped sense ladder — the local model first, Apple's on-device model, `NLEmbedding`.
     var senseLadder: LadderSenseSelector { access.senseLadder.ladder }
@@ -89,7 +108,7 @@ final class LocalModelCoordinator {
     /// What the lookup panel's translation pane is handed: the translator, the reader's language,
     /// and the download to put beside Apple's answer.
     var translationActions: TranslationActions {
-        let choice = controller.choice
+        let choice = choice
         #if HUIDICT_LOCAL_BUILD
         let target = "zh-Hans"
         #else
@@ -107,8 +126,8 @@ final class LocalModelCoordinator {
             // download answered the reader's "download" by fetching 4B instead: another three
             // gigabytes, and the one they had asked for abandoned part-finished.
             downloadModel: { [weak self] in
-                guard let self, let size = self.controller.choice.downloadable else { return }
-                self.controller.startDownload(size)
+                guard let self, let controller = self.controller, let size = controller.choice.downloadable else { return }
+                controller.startDownload(size)
             }, canTranslateWords: access.isInstalled)
     }
 }

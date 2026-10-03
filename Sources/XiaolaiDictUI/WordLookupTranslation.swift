@@ -8,7 +8,8 @@ struct WordLookupTranslation: Equatable {
     let gloss: WordTranslationGloss
 
     init?(_ outcome: TranslationOutcome, question: TranslationQuestion) {
-        guard case .translated(let text, by: .localModel) = outcome,
+        guard case .translated(let text, let engine) = outcome,
+              engine == .localModel || engine == .deepSeek,
               TranslationCheck.isTranslation(text, for: question),
               let gloss = WordTranslationGloss(text) else { return nil }
         self.question = question

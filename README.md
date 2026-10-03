@@ -25,9 +25,14 @@ release build uses Developer ID signing and requires the app and its services to
 ## Build HuiDict locally
 
 This fork includes the compact lookup card and an independent local app called **HuiDict**.
-With a local Qwen model installed, the card automatically shows a short Chinese translation of
+HuiDict uses the DeepSeek Flash API for contextual meanings, Chinese word glosses, sentence
+translations, and usage explanations. The local Qwen runtime is permanently disabled in this build.
+The key is read from a private runtime environment file, never bundled or committed. See
+[DeepSeek setup and verification](docs/deepseek.md).
+
+The card automatically shows a short Chinese translation of
 the selected word, using its surrounding sentence when available. A word-form note explains
-forms such as **refused** (past tense / past participle of **refuse**). Qwen's generated gloss is
+forms such as **refused** (past tense / past participle of **refuse**). DeepSeek's generated gloss is
 labelled separately from the dictionary's meanings, with `n.`, `v.`, `adj.`, or another grammar
 label beside each generated reading. Context determines the label; a passive verb remains `v.`.
 **More meanings** opens the dictionary details.
@@ -82,11 +87,11 @@ The local build runs the Swift tests first. Tests requiring optional licensed si
 are reported as skipped when those fixtures are not installed; the installed Apple dictionary tests run.
 
 To check word translations, grammatical readings, negation, and contextual explanations through
-the bundled Qwen service using an existing model (no download), run:
+the configured DeepSeek API (small billable requests, no local model download), run:
 
 ```sh
 .build/HuiDict.app/Contents/MacOS/HuiDict --word-translation-report
 ```
 
-If Qwen is unavailable or returns an invalid word gloss, the compact card keeps its dictionary
+If DeepSeek is unavailable or returns an invalid word gloss, the compact card keeps its dictionary
 meanings. Generated glosses do not become dictionary senses or saved sense confirmations.

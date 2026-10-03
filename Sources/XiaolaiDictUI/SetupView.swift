@@ -295,6 +295,7 @@ public struct SetupView: View {
     /// model knows nothing about it.
     private var modelStateLabel: Text? {
         switch board.model {
+        case .api(let configured): configured ? Text("Key configured") : Text("API key needed")
         case .downloading: Text("Downloading")
         case .tooLittleMemory: Text("Not available")
         case nil: Text("Not known")
@@ -318,6 +319,8 @@ public struct SetupView: View {
     /// and telling that reader their senses are picked by a simpler match would be false.
     @ViewBuilder private var modelDetail: some View {
         switch board.model {
+        case .api:
+            Text("DeepSeek translates words and sentences, picks contextual meanings, and explains usage. Lookup text and bounded meaning hints are sent to DeepSeek. Internet access and API credit are required. The local Qwen model is disabled.")
         case .ready(let size):
             Text("\(size.displayName) translates your sentences and picks the sense you met, on this Mac. Nothing is sent anywhere.")
         case .downloading(let progress, let size, let replacing):
@@ -547,7 +550,7 @@ public struct SetupView: View {
                         }
                         .buttonStyle(.glass)
                     }
-                case .tooLittleMemory:
+                case .tooLittleMemory, .api:
                     EmptyView()
                 }
             }
