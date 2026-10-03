@@ -366,6 +366,28 @@ struct SenseToKeepTests {
         #expect(keep.standing == .proposed)
     }
 
+    @Test @MainActor func studyingAnAmbiguousFavouriteKeepsItsKeyAsAnUnconfirmedProposal() throws {
+        let key = "m_en_gbus0362750.024"
+        let nearest = NearMiss(key: key, margin: 0.01, among: 3)
+        let ambiguous = card(.couldNot(.tooClose, nearest: nearest))
+        guard case .ambiguous = ambiguous.answer else {
+            Issue.record("the fixture is not ambiguous")
+            return
+        }
+        let target = try #require(LookupPanelContent.enrollmentTarget(for: ambiguous, in: entry))
+        #expect(target.senseKey == key, "studying replaced the favourite with an entry-level answer")
+        #expect(target.senseKeyKind != .none)
+        #expect(target.chosenBy == .model, "saving the hypothesis must not confirm it for the reader")
+    }
+
+    @Test @MainActor func studyingAReadersChoiceKeepsItsConfirmedAttribution() throws {
+        let key = "m_en_gbus0362750.005"
+        let chosen = card(.chosen(key: key, by: .reader))
+        let target = try #require(LookupPanelContent.enrollmentTarget(for: chosen, in: entry))
+        #expect(target.senseKey == key)
+        #expect(target.chosenBy == .reader)
+    }
+
     /// The near miss the ambiguous card leads with is offered, and says it was one of several.
     @Test func aNearMissIsKeptAsOneOfSeveral() throws {
         let nearest = NearMiss(key: "m_en_gbus0362750.024", margin: 0.01, among: 3)

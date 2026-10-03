@@ -45,12 +45,21 @@ enum ModelReport {
     /// already whole there — inside this signed bundle, through the same downloader the setup board
     /// uses — then asks the service for a sense answer and a translation through the real XPC path,
     /// reports the service's footprint, and watches it end itself when idle.
-    static func run(write: (String) -> Bool = LookupCommand.writeLine) async -> CommandStatus {
+    static func run(
+        write: (String) -> Bool = LookupCommand.writeLine,
+        measurement: (@MainActor (inout [String: Any]) async throws -> Bool)? = nil
+    ) async -> CommandStatus {
         var report: [String: Any] = [:]
         let ok: Bool
         do {
-            ok = try await measure(into: &report)
+            if let measurement {
+                ok = try await measurement(&report)
+            } else {
+                ok = try await measure(into: &report)
+            }
         } catch is CancellationError {
+            return .interrupted
+        } catch let error as URLError where error.code == .cancelled {
             return .interrupted
         } catch {
             // **Never the raw error.** A `URLError` carries the failing URL, and the weights come

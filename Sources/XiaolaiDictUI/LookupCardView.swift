@@ -1068,8 +1068,16 @@ public struct LookupPanelContent: View {
     /// `chosenBy` carries through unchanged, so a sense the model proposed enrols as a proposal and
     /// is not gradable until the reader agrees — the guess never becomes a fact by being saved.
     private func enrollable(_ entry: DictionaryEntry) -> SenseEncounter? {
+        Self.enrollmentTarget(for: card(for: entry), in: entry)
+    }
+
+    /// Saving an ambiguous favourite retains its key and its unconfirmed standing.
+    static func enrollmentTarget(for card: LookupCard, in entry: DictionaryEntry) -> SenseEncounter? {
         guard let entryKey = entry.entryKey else { return nil }
-        let card = card(for: entry)
+        if case .ambiguous(let favourite, _) = card.answer, let key = favourite.key,
+           let encounter = SenseEncounter.of(entry, senseKey: key, chosenBy: .model, at: .now) {
+            return encounter
+        }
         if let sense = card.leadingSense, let key = sense.key {
             // **The standing the card is drawing is the standing that is saved.** A proposal enrols
             // as a proposal and is not gradable until the reader agrees; a tap is theirs. Reading it

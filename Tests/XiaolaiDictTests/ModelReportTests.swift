@@ -247,3 +247,26 @@ struct ModelReportIdleWatchTests {
         #expect(thrown is CancellationError)
     }
 }
+
+@MainActor
+struct ModelReportRunTests {
+    @Test func aCancelledTransportIsAnInterruptionWithoutAFailureReport() async {
+        var output: [String] = []
+        let status = await ModelReport.run(write: { output.append($0); return true }, measurement: { _ in
+            throw URLError(.cancelled)
+        })
+        #expect(status == .interrupted)
+        #expect(output.isEmpty, "a stopped report must not be emitted as a build failure")
+    }
+
+    @Test func aTransportFailureStillEmitsTheSanitizedFailure() async throws {
+        var output: [String] = []
+        let status = await ModelReport.run(write: { output.append($0); return true }, measurement: { _ in
+            throw URLError(.timedOut)
+        })
+        #expect(status == .failure)
+        let data = try #require(output.first?.data(using: .utf8))
+        let report = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        #expect(report["error"] as? String == "URLError -1001")
+    }
+}
