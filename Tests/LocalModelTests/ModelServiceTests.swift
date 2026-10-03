@@ -475,6 +475,12 @@ struct ModelServiceTests {
         await Self.waitUntil { model.requests.count == 1 }
         try #require(model.requests.count == 1, "the first generation never started")
         if memoryFallsAfterFirst { available.withLock { $0 = 0 } }
+        guard case .status(let loading) = await service.reply(to: .status) else {
+            Issue.record("no status during the first generation")
+            return
+        }
+        #expect(loading.installed == .standard, "status lost the size currently being loaded")
+        #expect(!loading.loaded, "the first generation has not answered yet")
         let second = Task { await service.reply(to: .explain(question)) }
         defer { second.cancel() }
         await Self.waitUntil { model.requests.count == 2 }

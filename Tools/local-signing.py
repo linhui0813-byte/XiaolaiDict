@@ -91,6 +91,9 @@ def setup(directory):
             return
         raise RuntimeError("Signing directory already contains files; no identity was replaced")
     protect_existing_identity([INSTALLED, REPO / ".build/HuiDict.app"])
+    openssl = shutil.which("openssl")
+    if not openssl:
+        raise RuntimeError("OpenSSL is required to create the local certificate")
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     os.chmod(directory, 0o700)
     password = secrets.token_urlsafe(36)
@@ -98,9 +101,6 @@ def setup(directory):
     # OpenSSL reads two lines when passin and passout refer to the same file.
     password_file.write_text(password + "\n" + password + "\n")
     os.chmod(password_file, 0o600)
-    openssl = shutil.which("openssl")
-    if not openssl:
-        raise RuntimeError("OpenSSL is required to create the local certificate")
     key, cert, package = (directory / name for name in ["private-key.pem", "certificate.pem", "identity.p12"])
     config = directory / "certificate.cnf"
     config.write_text("""[req]

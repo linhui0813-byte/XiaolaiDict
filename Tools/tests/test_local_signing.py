@@ -29,6 +29,16 @@ class LocalSigningTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "outside the repository"):
             SIGNING.setup(SIGNING.REPO / ".build/signing-test")
 
+    def test_missing_openssl_does_not_leave_partial_credentials(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = Path(scratch) / "Signing"
+            with patch.object(SIGNING, "protect_existing_identity"), \
+                 patch.object(SIGNING.shutil, "which", return_value=None):
+                for _ in range(2):
+                    with self.assertRaisesRegex(RuntimeError, "OpenSSL is required"):
+                        SIGNING.setup(directory)
+                    self.assertFalse(directory.exists(), "a failed preflight created signing files")
+
     def test_a_partial_directory_does_not_replace_existing_credentials(self):
         with tempfile.TemporaryDirectory() as scratch:
             directory = Path(scratch)

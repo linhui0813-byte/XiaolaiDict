@@ -143,14 +143,15 @@ public actor ModelService {
     /// the answer, since that memory is already spent; otherwise the same gate the loading asks, so
     /// status cannot advertise a size the service would then refuse for want of memory.
     ///
-    /// **"Holds" means it has answered, exactly as `loaded()` means it.** A built `MLXLanguageModel`
+    /// An in-flight first generation keeps the size already admitted by the loading gate.
+    /// Once idle, only an answered model bypasses that gate: a built `MLXLanguageModel`
     /// has mapped nothing, so after a first generation that failed or was cancelled, `model` is set
     /// and no weights are resident — and status reading that field alone would name a size that
     /// `loaded()` then refuses for want of memory, which is the promise this method exists to keep.
     private func status() -> ModelReply {
         let available = availableMemory()
         return .status(ModelServiceStatus(
-            installed: (hasAnswered ? model?.size : nil) ?? fitting(available: available ?? 0)?.size,
+            installed: (hasAnswered || generating > 0 ? model?.size : nil) ?? fitting(available: available ?? 0)?.size,
             loaded: hasAnswered, gpu: gpuName(), footprint: footprint(), availableMemory: available))
     }
 
