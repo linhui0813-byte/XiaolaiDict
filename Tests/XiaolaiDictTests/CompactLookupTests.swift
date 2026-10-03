@@ -25,9 +25,11 @@ struct CompactLookupTests {
         let original = card(.sense(chosen), alternatives: other)
         let quick = CompactLookupSummary(card: original)
         #expect(quick.senses.first == chosen)
-        #expect(quick.senses.count == 3)
+        #expect(quick.senses.count == 5)
         #expect(quick.groups.map(\.partOfSpeech) == ["v."])
-        #expect(quick.groups.first?.labels == ["拒绝", "other meaning 1", "other meaning 2"])
+        #expect(quick.groups.first?.labels == [
+            "拒绝", "other meaning 1", "other meaning 2", "other meaning 3", "other meaning 4",
+        ])
         #expect(!quick.isUncertain)
         #expect(original.alternatives == other, "the quick preview must not truncate the detailed card")
         #expect(original.senseToKeep?.standing == .confirmed)

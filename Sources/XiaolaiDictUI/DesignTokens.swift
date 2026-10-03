@@ -76,7 +76,7 @@ public enum Token {
     }
 
     enum Panel {
-        static let compactMeaningLimit = 3
+        static let compactMeaningLimit = 5
         static let compactMeaningLines = 2
         static let compactProseLines = 4
         /// What the lookup window **opens** at, before the card has laid itself out — the scene
