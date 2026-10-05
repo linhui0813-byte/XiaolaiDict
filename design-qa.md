@@ -4,110 +4,110 @@ final result: passed
 
 ## Findings
 
-The earlier pass accepted backdrop blur and opacity response without checking the reflective
-edge. Hui's live `implement` screenshot reopened that acceptance. The revised native card now
-has a bright curved outer edge, a softer inner reflection, and a shaded inner edge. The focused
-comparison shows these features at the top-left corner where the previous card was a flat plate.
-No actionable P0, P1, or P2 differences remain in the captured states against the material target.
-This is a comparison of glass treatment, not a claim that dictionary content is pixel-identical
-to Apple's Control Center.
+**Resolved P1 — transparency changed tint but hid reading details at both endpoints.** Hui's
+latest screenshots show a white plate at 0% and a gray plate at 100%, with little background detail.
+The combined source/implementation comparison below shows those images with the installed fix.
+`LookupGlassSurface` now adjusts the native background contribution and neutral wash separately
+from the opaque foreground. The focused comparison confirms background letters passing through at
+100%; a color change alone no longer establishes transparency. No actionable P0/P1/P2 findings
+remain for this transparency correction in the captured states.
 
 ## Source and implementation
 
-- Source visual truth: [Hui's Apple Control Center reference](docs/liquid-glass-control-center-reference.png),
-  a 285 × 287 pixel crop of the supplied 592 × 998 screenshot. Only Bluetooth and AirDrop are retained;
-  the crop omits the personal Wi-Fi name and activity banner. Original capture density is unknown.
-- Earlier card design: [selected settings mockup](docs/liquid-glass-design.png), 1487 × 1058 pixels.
-  Its dictionary layout and dark foreground remain the content target.
-- Implementation: [actual floating card](docs/liquid-glass-popup.png), build `2026.1005.152146`,
-  320 × 299 pixels at 1 pixel per macOS point, including its asymmetric shadow margin.
-  This is a real `refused` lookup through the app's dictionary service, with its normal word translation.
-- State: light app appearance, saved transparency approximately 75%, app inactive, window not key.
-  The diagnostic backdrop is the app's own reading window, not an image embedded in the product.
-  The backdrop does not represent the exact content behind Control Center in Hui's screenshot.
-- [Full material comparison](docs/liquid-glass-popup-comparison.png), 1050 × 390 pixels, contains the
-  Apple material reference, previous real card at 100%, and revised real card at 100% together.
-  The previous capture is installed build `2026.1005.145902`; both native card captures are 320 × 299
-  pixels, use the same reading backdrop, and show the same dictionary/translation content. A new
-  attempt to capture that old build returned `windowMissing`, so the previously verified capture
-  is used and no fresh baseline-run success is claimed.
-- [Focused edge comparison](docs/liquid-glass-popup-edge-comparison.png), 900 × 340 pixels, enlarges
-  actual 100 × 100 pixel corner crops to 285 × 285 pixels. This makes rim illumination and inner depth
-  visible; enlargement adds no rendering detail. The capsule and dictionary corners have different
-  geometry, so their radii are not judged by a pixel difference.
-- [Appearance pane](docs/liquid-glass-appearance.png), 1160 × 1284 pixels at 2 pixels per point in the
-  existing 580 × 642 point window, uses the same revised compact-card material and the saved 75% value.
-  Its chrome and slider were inactive in this capture. [Focused preview endpoints](docs/liquid-glass-settings-optics-transparency.png)
-  normalize the 2x card crops to 400 pixels wide and show 0%, 75%, and 100% together.
-- [Pop-up opacity states](docs/liquid-glass-popup-transparency.png), 1380 × 355 pixels, include 0%,
-  55%, saved 75%, and 100% without rescaling the native captures. [Dark reading backdrop](docs/liquid-glass-popup-dark.png)
-  checks the same light-appearance card at maximum transparency. There is no CSS viewport or browser.
+- Source visual truth: Hui's supplied `latest` screenshots, originally 323 × 298 and 316 × 287
+  pixels. Card crops are [reported 0%](docs/liquid-glass-reported-0.png), 300 × 271, and
+  [reported 100%](docs/liquid-glass-reported-100.png), 301 × 271. Original display density is unknown.
+- Material direction: [Apple Control Center reference](docs/liquid-glass-control-center-reference.png),
+  285 × 287 pixels, and [selected dictionary design](docs/liquid-glass-design.png), 1487 × 1058.
+  Different control shapes, content, and backdrops are not pixel-match targets for this fix.
+- Rendered implementation: installed HuiDict build `2026.1005.155745`,
+  [actual card at saved 46%](docs/liquid-glass-popup.png), 320 × 345 pixels including its shadow margin.
+  Native viewport: 320 × 345 macOS points at 1 pixel per point. There is no CSS viewport or browser.
+- State: real `latest` dictionary-service lookup, `Form of late`, normal translation without a
+  captured sentence, light app appearance, inactive app, non-key card. The supplied screenshots use
+  contextual Chinese definitions; the diagnostic's normal lookup has longer English alternatives.
+  This dynamic-content difference changes height and wrapping. The controlled white reading page
+  also differs from Hui's live page. Within each endpoint pair, content and backdrop are the same.
+- [Full source and implementation comparison](docs/liquid-glass-transmission-comparison.png),
+  680 × 720 pixels. Images are normalized to 300 pixels wide with proportional height. Native
+  captures are downsampled from 320 pixels; the source 100% crop is downsampled from 301 pixels.
+- [Installed 0%, 55%, and 100%](docs/liquid-glass-popup-transparency.png), 1040 × 415, compares native
+  captures without rescaling. The [dark page](docs/liquid-glass-popup-dark.png) checks the same light
+  card at maximum transparency, not dark app appearance.
+- [Focused detail transmission](docs/liquid-glass-transmission-detail.png), 1404 × 187, compares the
+  same 146 × 38 pixel region of the bare page, 0%, and 100%. It excludes dictionary text and enlarges
+  pixels 3× without adding detail. Background letters are absent at 0% and transmitted at 100%.
+- [Appearance pane](docs/liquid-glass-appearance.png), 580 × 642 pixels at 1 pixel per point,
+  preserves the existing 580 × 642 point window. [Preview endpoints](docs/liquid-glass-settings-optics-transparency.png),
+  1280 × 345, compare 0%, saved 46%, and 100%. The 320 × 218 point crops are enlarged proportionally
+  to 400 pixels wide. These were captured from the same signed candidate installed above.
 
 ## Comparison history
 
-1. **Resolved P2 — the original Settings backdrop stopped above the definitions.** The preview now
-   continues sample reading paragraphs across the full card region. Earlier layout evidence remains
-   in [the compact-card report](design-qa-compact.md) and `docs/liquid-glass-iteration.png`.
-2. **Resolved P1 — the actual unfocused pop-up was opaque despite the Settings preview.** The previous
-   fix explicitly supplied the public `appearsActive` value and cleared the SwiftUI window backing.
-   Its real non-key-window report verified opacity changes. That established functioning material,
-   but the later live screenshot showed that its optical quality still needed work.
-3. **Resolved P1 — a gray outline and narrow corners made the glass look flat.** Hui's Control Center
-   screenshot became the explicit optical target. An isolated native non-key-window experiment
-   compared background-only clear glass, whole-content clear/regular glass, native tint, and AppKit
-   `contentView` hosting. Switching the native style alone still left the edge flat. The production
-   modifier now keeps foreground and wash in the same native glass hierarchy, removes the gray
-   outline, adds a graduated outer reflection plus an inner illuminated/shaded edge, and increases
-   lookup corner radius from 1.5 to 2.5 em. The surface opacity still changes only the neutral wash.
-   The full and focused comparisons above show the revised real card, not only the experiment.
+1. **Resolved P2 — Settings sample text stopped above the definitions.** The earlier preview fix
+   extends paragraphs across the card region. Historical evidence remains in
+   [the compact-card report](design-qa-compact.md) and `docs/liquid-glass-iteration.png`.
+2. **Earlier P1 — unfocused lookup opaque while Settings showed glass.** Clearing the SwiftUI
+   window backing and supplying visual activity enabled native material without making the card key.
+   The subsequent color-band metric accepted a color/luminance shift. Hui's white-page screenshots
+   reopened that claim: the metric did not prove detail transmission on ordinary reading content.
+3. **Resolved P1 — flat gray edge and tight corners.** The previous iteration added the reflective
+   outer edge, inner illumination/shading, and broader continuous corners. Historical evidence remains
+   in `docs/liquid-glass-popup-comparison.png` and `docs/liquid-glass-popup-edge-comparison.png`.
+   Those older images do not validate current transparency behavior.
+4. **Resolved P1 — fixed blur at both slider endpoints.** This iteration separates native glass into
+   a background layer whose contribution decreases with transparency. Foreground opacity stays full.
+   The installed full/focused comparisons above show reading detail. The diagnostic now compares
+   correlation with a bare reading-page reference instead of counting changed luminance pixels.
+5. **Resolved P2 — the first revised maximum was too clear for dense/dark pages.** Candidate captures
+   in `.build/liquid-glass-transmission-candidate-evidence` showed excess interference. Final endpoints
+   retain 55% of the native glass layer and a 20% neutral contrast veil at maximum, plus small local
+   foreground shadows. Installed captures retain background detail while separating the bold word,
+   definitions, labels, and action. Dense background text remains more visible at maximum; lower
+   values provide a quieter reading surface. This is an intentional clarity tradeoff.
 
 ## Required fidelity surfaces
 
 | Surface | Review |
 | --- | --- |
-| Fonts and typography | Existing system fonts, bold word, pronunciation, part-of-speech labels, definitions, and blue action are preserved. Foreground now receives the glass hierarchy's visual treatment. Text stays sharp at each opacity; the English definition retains its existing compact truncation and More meanings action. |
-| Spacing and layout | Existing card width, padding, content height, settings layout, and shadow margins are preserved. Broader continuous corners support the reflective rim without clipping content. All six Settings panes settle at the existing 580-point width without overshoot or top-edge drift. |
-| Colors and tokens | Live native clear glass continues to sample and blur the backdrop. Outer reflection, inner shading, and corner geometry use design tokens. Opacity changes only the neutral wash. The outer edge is strongest along the illuminated curves rather than a uniform gray outline. Reduce Transparency retains its opaque branch; Increase Contrast adds a distinct inner boundary. |
-| Image quality and assets | Native live text and SF Symbols are used. No screenshot or generated background is embedded in the card. The reference and implementation PNGs are evidence only. Bright specular edges are vector UI treatment, over the native material. |
-| Copy and content | The Liquid Glass description, slider, percentage, endpoint labels, and helper text retain the approved adjustment panel. Real lookup text, pronunciation, dictionary service, translation, and More meanings flow retain their existing behavior. |
+| Fonts and typography | Existing system family, weights, sizes, line height, hierarchy, pronunciation, and SF Symbols remain. The bold word and blue action are distinct. Longer normal-lookup definitions use existing wrapping/truncation. Local contrast shadows do not fade text and are more visible over the dark page. |
+| Spacing and layout | Existing width, padding, groups, continuous corners, rim, and shadow remain. Content determines height, explaining the source-height difference. No clipped controls were found. All six Settings panes settle at 580 points wide without overshoot or top-edge drift. |
+| Colors and tokens | 0% is opaque; 100% transmits background letters. Native background and tint contribution use design tokens. Foreground and system blue action retain opacity. Reduce Transparency preserves the opaque branch; Increase Contrast preserves the inner boundary. OS accessibility settings were not changed for capture. |
+| Image quality and assets | Production uses live native glass, system text, and SF Symbols. No captured background, generated art, or substitute logo is embedded. PNGs are evidence. Focused enlargement preserves original pixels. The illuminated rim remains a UI surface treatment. |
+| Copy and content | Liquid Glass description, percentage, endpoint labels, helper copy, and More meanings retain the approved panel. Actual `latest`, `Form of late`, and real service results appear. Contextual versus normal translation explains content differences. |
 
-## Native validation
+## Native validation and delivery
 
-- `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer make local` passed: seven Swift test
-  runs totaling 2,109 tests and 83 Python tool/reference tests. Existing optional-fixture and
-  upstream-bundle guard skips remain; this build produces HuiDict. No test failures were reported.
-- The installed pop-up used window 9535 throughout 0%, 55%, saved 75%, and 100%. Every state
-  had `isKey: false` and `appIsActive: false`; the frontmost application remained unchanged.
-  Changing the same observable preference used by the slider from 0% to 100% changed 98.54% of
-  measured interior pixels by more than 24 luminance levels. That establishes opacity response;
-  it does not substitute for the visual edge comparison.
-- The saved value `0.7479014295212766` was restored after both native diagnostics.
-- The Settings report captured Appearance and Permissions with no evidence errors. All six panes
-  settled, preserved width, and had zero top-edge drift and zero overshoot.
-- The candidate passed signing/update compatibility and strict bundle verification before replacement.
-  The installed bundle retains the host and both service hashes verified at staging. Three fresh
-  installed permission-report processes returned `com.linhui.huidict`, both grants, and exit zero.
-  Normal LaunchServices process 10865 had macOS TCC Allowed decisions for Accessibility and
-  Screen Recording, with HuiDict as the subject. Three installed real service lookups returned entries.
-  The previous bundle is retained at the existing Applications location as a rollback copy.
+- `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer make local` passed: seven Swift runs
+  totaling 2,110 tests and 83 Python tool/reference tests, including ScreenRecordingAccessTests.
+  Existing optional-fixture and upstream-bundle guard skips remain; no test failures occurred.
+- Installed non-key window 9887 stayed open throughout 18 states: six values on white, colored, and
+  dark pages. Every state had `appIsActive: false` and `isKey: false`; Chrome retained focus.
+  Saved value `0.4564910239361702` was restored. The first installed capture lost its temporary
+  window; an isolated rerun completed all states successfully.
+- White-page correlation with the bare backdrop rose from -0.0256 at 0% to 0.4286 at 100%
+  (gain 0.4542). The check requires clear correlation above 0.35 and gain above 0.20. Colored and
+  dark-page gains were 0.4252 and 0.6412. Correlation measures detail correspondence, not a percentage
+  of optical transparency; visual endpoint comparison is also required.
+- Settings captured Appearance and Permissions with no evidence problems. All six panes settled
+  with the same width, zero overshoot, and zero top-edge drift; the saved preference was restored.
+- Signing/update checks passed before atomic installation. Installed host and both XPC service hashes
+  matched staging. Three fresh installed permission reports returned the correct bundle, both grants,
+  and exit zero. Normal LaunchServices process 23660 had TCC Allowed decisions for Accessibility and
+  Screen Recording with HuiDict as the responsible process. Three installed real service lookups
+  returned entries. The previous bundle remains available as a reversible rollback copy.
 
-## Intentional differences and residual checks
+## Residual checks and follow-up polish
 
-Control Center is a grid of controls with white foreground, capsule shapes, and a different backdrop.
-The dictionary retains the selected mockup's dark reading text, its compact layout, and its blue action.
-Its public native glass supplies blur and refraction; the added rim supplies the visible large-sheet
-edge. The subdued in-window reading preview shows diffuse backdrop color at high transparency rather
-than readable background text. The actual floating-window captures demonstrate the clearer material
-response over distinct reading colors. These are expected state and content differences.
-
-The diagnostics mutate the slider's observable preference; a physical slider drag is not claimed.
-Dark app appearance, pointer hover, and user-triggered selection/image shortcut gestures were not
-performed in this optical QA run. No OS accessibility preferences were changed for testing.
+Diagnostics change the slider's observable preference; a physical drag is not claimed. User-triggered
+selection/image shortcuts, pointer hover, and dark app appearance were not performed in this iteration.
+Maximum transparency exposes more background text, so reading comfort over dense pages remains a
+useful user check. No exact match to Apple's Control Center optics or adaptive foreground is claimed.
 
 ## Implementation checklist
 
-- [x] Compare reference and real implementation together, including focused rim crops.
-- [x] Resolve the flat-edge mismatch and recapture the actual non-key card.
-- [x] Check Settings layout, preview, opacity endpoints, and preservation of the saved setting.
-- [x] Pass required tests and preserve signing compatibility before installation.
-- [x] Verify installed normal-launch grants and real service lookups after deployment.
+- [x] Open source and installed captures together with normalized scale.
+- [x] Resolve tint-only transparency and inspect focused background detail.
+- [x] Check foreground, intermediate values, Settings preview, and saved preference.
+- [x] Pass required tests and preserve signing during reversible installation.
+- [x] Verify normal-launch grants, unfocused installed card, and dictionary service.

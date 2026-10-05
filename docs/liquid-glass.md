@@ -3,9 +3,12 @@
 Open HuiDict's **Settings → Appearance** to adjust **Transparency**. The preview and open lookup
 cards update immediately, and the preference is saved across restarts. The default is 55%.
 
-Moving left adds a neutral opaque wash; moving right reveals more of the background. Native
-Liquid Glass supplies the curved optical edge and refraction. The percentage controls the wash,
-not the opacity of the text or the entire window. Text, icons, and actions do not fade with the slider.
+Moving left adds a neutral opaque wash; moving right reveals more of the background. The slider
+adjusts both the native glass background contribution and the neutral wash. Adjusting the wash
+alone left small reading text hidden by the native blur, even at 100%. Native Liquid Glass still
+supplies blur and refraction, with an illuminated rim around the card. At 0% the surface is opaque;
+100% is the clearest glass setting, retaining some material and contrast for reading. Text, icons,
+and actions do not fade with the slider; small local shadows help separate them from the backdrop.
 “More meanings” uses the system accent color and opens the existing detailed card.
 
 The lookup keeps its material visually active even though the floating window remains unfocused.
@@ -46,13 +49,17 @@ HUIDICT_LOOKUP_GLASS_EVIDENCE_DIRECTORY="$PWD/.build/liquid-glass-popup-evidence
 ```
 
 This opt-in report leaves one real lookup window open while changing the same observable preference
-as the slider to 0%, 55%, the saved value, and 100%. It captures only HuiDict's card and its own
-reading backdrop, checks that the card's interior changes, records focus state, and restores the
-saved preference. A further capture checks the clear card over dark reading content. It posts no
-input events and records no fabricated reading history.
+as the slider to 0%, 25%, 55%, 75%, the saved value, and 100%. It captures only HuiDict's card and
+its own white, colored, and dark reading pages. Each page is also captured without the card as a
+reference. The report compares the card's interior with that reference using correlation, so a tint
+or luminance shift alone cannot establish transparency. The white-page check requires visible
+background detail at 100% and a substantial gain over 0%. It also records focus state and restores
+the saved preference. It posts no input events and records no fabricated reading history.
 
 See [the actual pop-up](liquid-glass-popup.png), [its transparency levels](liquid-glass-popup-transparency.png),
 and [the dark-background check](liquid-glass-popup-dark.png).
+The [reported and corrected endpoints](liquid-glass-transmission-comparison.png) and
+[focused background-detail comparison](liquid-glass-transmission-detail.png) document the fix.
 
 See [the selected design](liquid-glass-design.png) and [design QA](../design-qa.md). Selection and
 image lookup gestures, slider dragging, and keyboard adjustment should also be tried in the

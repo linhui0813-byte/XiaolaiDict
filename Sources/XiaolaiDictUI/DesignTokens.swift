@@ -80,6 +80,13 @@ public enum Token {
         static let settingsLabelWidth: CGFloat = 112
         static let previewHeight: CGFloat = 300
         static let previewParagraphs = 3
+        /// Maximum transmission retains some native refraction while letting reading detail through.
+        static let clearTransmission = 0.45
+        /// The clearest setting still has a light contrast veil for dictionary text over dark pages.
+        static let tintTransmission = 0.80
+        /// These small glyph halos preserve the foreground independently from the background opacity.
+        static let foregroundGlowRadius: CGFloat = 2
+        static let foregroundEdgeRadius: CGFloat = 0.5
         // Edge optics answer to the display, like hairlines, rather than to the reading font.
         static let rimWidth: CGFloat = 1.4
         static let rimInset: CGFloat = 1.5

@@ -34,10 +34,22 @@ struct LookupGlassTests {
     }
 
     @Test func transparencyAffectsTheSurfaceContinuouslyAndRespectsAccessibility() {
-        for value in [0.0, 0.25, 0.55, 0.75, 1.0] {
-            let glass = LookupGlass(transparency: value)
-            #expect(glass.surfaceOpacity(reduceTransparency: false) == 1 - value)
-            #expect(glass.surfaceOpacity(reduceTransparency: true) == 1)
-        }
+        let settings = [0.0, 0.25, 0.55, 0.75, 1.0].map { LookupGlass(transparency: $0) }
+        let opacities = settings.map { $0.surfaceOpacity(reduceTransparency: false) }
+        #expect(opacities.first == 1)
+        #expect(opacities.last! > 0)
+        #expect(opacities.last! < 0.25)
+        #expect(zip(opacities, opacities.dropFirst()).allSatisfy { $0 > $1 })
+        #expect(settings.allSatisfy { $0.surfaceOpacity(reduceTransparency: true) == 1 })
+    }
+
+    @Test func clearerSettingsReduceTheNativeMaterialAndRespectAccessibility() {
+        let settings = [0.0, 0.25, 0.55, 0.75, 1.0].map { LookupGlass(transparency: $0) }
+        let opacities = settings.map { $0.materialOpacity(reduceTransparency: false) }
+        #expect(opacities.first == 1)
+        #expect(opacities.last! > 0)
+        #expect(opacities.last! < 0.75)
+        #expect(zip(opacities, opacities.dropFirst()).allSatisfy { $0 > $1 })
+        #expect(settings.allSatisfy { $0.materialOpacity(reduceTransparency: true) == 0 })
     }
 }

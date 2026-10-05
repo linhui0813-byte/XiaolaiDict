@@ -11,7 +11,12 @@ public struct LookupGlass: Equatable, Sendable {
     }
 
     func surfaceOpacity(reduceTransparency: Bool) -> Double {
-        reduceTransparency ? 1 : 1 - transparency
+        reduceTransparency ? 1 : 1 - transparency * Token.Glass.tintTransmission
+    }
+
+    /// Tint alone cannot reveal reading text: the fixed native blur hides it even without tint.
+    func materialOpacity(reduceTransparency: Bool) -> Double {
+        reduceTransparency ? 0 : 1 - transparency * Token.Glass.clearTransmission
     }
 }
 
@@ -19,7 +24,7 @@ extension EnvironmentValues {
     @Entry var lookupGlass: LookupGlass = .standard
 }
 
-/// Keep the foreground inside the native glass hierarchy. Only the neutral wash changes opacity.
+/// Adjust the complete optical background independently from the solid foreground.
 private struct LookupGlassSurface: ViewModifier {
     @Environment(\.scale) private var scale
     @Environment(\.lookupGlass) private var glass
@@ -41,9 +46,20 @@ private struct LookupGlassSurface: ViewModifier {
                     lineWidth: Token.Stroke.hairline))
         } else {
             content.clipShape(shape)
-                .background(shape.fill(CardSurface.panel(for: scheme).opacity(
-                    glass.surfaceOpacity(reduceTransparency: false))))
-                .glassEffect(.clear, in: shape)
+                // Local separation around glyphs helps at the clear end without fogging the plate.
+                .shadow(color: CardSurface.panel(for: scheme).opacity(glass.transparency),
+                        radius: Token.Glass.foregroundGlowRadius)
+                .shadow(color: CardSurface.panel(for: scheme).opacity(glass.transparency),
+                        radius: Token.Glass.foregroundEdgeRadius)
+                .background {
+                    ZStack {
+                        shape.fill(.clear)
+                            .glassEffect(.clear, in: shape)
+                            .opacity(glass.materialOpacity(reduceTransparency: false))
+                        shape.fill(CardSurface.panel(for: scheme).opacity(
+                            glass.surfaceOpacity(reduceTransparency: false)))
+                    }
+                }
                 // This window must stay non-key. The environment changes visual activity only.
                 .environment(\.appearsActive, true)
                 .overlay {
