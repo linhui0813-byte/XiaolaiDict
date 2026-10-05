@@ -80,6 +80,26 @@ public enum Token {
         static let settingsLabelWidth: CGFloat = 112
         static let previewHeight: CGFloat = 300
         static let previewParagraphs = 3
+        // Edge optics answer to the display, like hairlines, rather than to the reading font.
+        static let rimWidth: CGFloat = 1.4
+        static let rimInset: CGFloat = 1.5
+        static let rimGlowWidth: CGFloat = 3
+        static let rimGlowRadius: CGFloat = 3
+        static let rimGlowOpacity = 0.30
+        static let innerReflectionBlur: CGFloat = 0.6
+        static let contrastInset: CGFloat = 3
+        /// Light catches both diagonally opposed edges; the side between them stays transparent.
+        static let outerReflection = Gradient(stops: [
+            .init(color: .white.opacity(0.95), location: 0),
+            .init(color: .white.opacity(0.65), location: 0.20),
+            .init(color: .white.opacity(0.06), location: 0.52),
+            .init(color: .white.opacity(0.65), location: 0.78),
+            .init(color: .white.opacity(0.95), location: 1),
+        ])
+        /// A shaded inner edge separates the curved glass from a flat translucent plate.
+        static let innerReflection = Gradient(colors: [
+            .white.opacity(0.65), .white.opacity(0.02), .black.opacity(0.18),
+        ])
     }
 
     enum Panel {

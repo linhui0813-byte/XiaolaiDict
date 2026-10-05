@@ -19,7 +19,7 @@ extension EnvironmentValues {
     @Entry var lookupGlass: LookupGlass = .standard
 }
 
-/// Only the background receives the glass effect. Fading the whole card would also fade its text.
+/// Keep the foreground inside the native glass hierarchy. Only the neutral wash changes opacity.
 private struct LookupGlassSurface: ViewModifier {
     @Environment(\.scale) private var scale
     @Environment(\.lookupGlass) private var glass
@@ -32,26 +32,57 @@ private struct LookupGlassSurface: ViewModifier {
     }
 
     func body(content: Content) -> some View {
-        content
-            .clipShape(shape)
-            .background {
-                if reduceTransparency {
-                    shape.fill(CardSurface.panel(for: scheme))
-                } else {
-                    // A continuous wash controls opacity while native clear glass keeps its rim
-                    // and refraction. No private blur API and no fading of the foreground.
-                    shape.fill(CardSurface.panel(for: scheme).opacity(
-                        glass.surfaceOpacity(reduceTransparency: false)))
-                        .glassEffect(.clear, in: shape)
-                        // The lookup deliberately never becomes key. Keep only its material
-                        // visually active; making the window key would steal the reader's focus.
-                        .environment(\.appearsActive, true)
+        if reduceTransparency {
+            content.clipShape(shape)
+                .background(shape.fill(CardSurface.panel(for: scheme)))
+                .overlay(shape.strokeBorder(
+                    Color.primary.opacity(contrast == .increased
+                        ? Token.Opacity.accentBorder : Token.Opacity.border),
+                    lineWidth: Token.Stroke.hairline))
+        } else {
+            content.clipShape(shape)
+                .background(shape.fill(CardSurface.panel(for: scheme).opacity(
+                    glass.surfaceOpacity(reduceTransparency: false))))
+                .glassEffect(.clear, in: shape)
+                // This window must stay non-key. The environment changes visual activity only.
+                .environment(\.appearsActive, true)
+                .overlay {
+                    LookupGlassRim(shape: shape, increasedContrast: contrast == .increased)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
                 }
+        }
+    }
+}
+
+/// An illuminated edge gives a large glass sheet visible thickness even over a uniform page.
+/// The backdrop blur and refraction remain native; no background is captured or drawn here.
+private struct LookupGlassRim: View {
+    let shape: RoundedRectangle
+    let increasedContrast: Bool
+
+    var body: some View {
+        ZStack {
+            // Light just inside the edge, rather than a white wash across the reading surface.
+            shape.inset(by: Token.Glass.rimInset)
+                .strokeBorder(.white.opacity(Token.Glass.rimGlowOpacity), lineWidth: Token.Glass.rimGlowWidth)
+                .blur(radius: Token.Glass.rimGlowRadius)
+                .clipShape(shape)
+            // The inner edge shades the lower side of the glass and catches light above it.
+            shape.inset(by: Token.Glass.rimInset)
+                .strokeBorder(LinearGradient(gradient: Token.Glass.innerReflection,
+                    startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: Token.Stroke.hairline)
+                .blur(radius: increasedContrast ? 0 : Token.Glass.innerReflectionBlur)
+            shape.strokeBorder(LinearGradient(gradient: Token.Glass.outerReflection,
+                startPoint: .topLeading, endPoint: .bottomTrailing),
+                lineWidth: Token.Glass.rimWidth)
+            if increasedContrast {
+                shape.inset(by: Token.Glass.contrastInset).strokeBorder(
+                    Color.primary.opacity(Token.Opacity.accentBorder),
+                    lineWidth: Token.Stroke.hairline)
             }
-            .overlay(shape.strokeBorder(
-                Color.primary.opacity(contrast == .increased
-                    ? Token.Opacity.accentBorder : Token.Opacity.border),
-                lineWidth: Token.Stroke.hairline))
+        }
     }
 }
 

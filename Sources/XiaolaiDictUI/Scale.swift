@@ -243,7 +243,8 @@ struct Scale: Equatable, Sendable {
         init(em: CGFloat) {
             card = em * 0.90
             panel = em * 1.00
-            lookup = em * 1.50
+            // A broad curved edge carries the lookup's glass reflection, like a floating macOS control.
+            lookup = em * 2.50
         }
     }
 
