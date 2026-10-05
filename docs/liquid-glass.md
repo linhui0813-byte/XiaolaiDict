@@ -8,6 +8,10 @@ Liquid Glass supplies the curved optical edge and refraction. The percentage con
 not the opacity of the text or the entire window. Text, icons, and actions do not fade with the slider.
 “More meanings” uses the system accent color and opens the existing detailed card.
 
+The lookup keeps its material visually active even though the floating window remains unfocused.
+It clears the SwiftUI window backing explicitly. This lets the actual card show the background
+and respond to transparency changes while the reader continues typing in the other app.
+
 The preview uses the actual compact card renderer over sample reading text. It preserves the
 existing grouping of meanings and the five-meaning limit. The sample's buttons are noninteractive;
 the same controls on a real lookup retain their existing actions.
@@ -33,6 +37,22 @@ The diagnostic checks the existing Screen Recording grant silently before captur
 requests permission, captures only its own settings window, reports capture failures, and restores
 the saved transparency after collecting evidence. This optional mode requests activation of its
 settings window. Normal diagnostics do not capture or activate it.
+
+To verify the **actual floating lookup**, rather than just the Settings preview:
+
+```sh
+HUIDICT_LOOKUP_GLASS_EVIDENCE_DIRECTORY="$PWD/.build/liquid-glass-popup-evidence" \
+  ~/Applications/HuiDict.app/Contents/MacOS/HuiDict --panel-report
+```
+
+This opt-in report leaves one real lookup window open while changing the same observable preference
+as the slider to 0%, 55%, the saved value, and 100%. It captures only HuiDict's card and its own
+reading backdrop, checks that the card's interior changes, records focus state, and restores the
+saved preference. A further capture checks the clear card over dark reading content. It posts no
+input events and records no fabricated reading history.
+
+See [the actual pop-up](liquid-glass-popup.png), [its transparency levels](liquid-glass-popup-transparency.png),
+and [the dark-background check](liquid-glass-popup-dark.png).
 
 See [the selected design](liquid-glass-design.png) and [design QA](../design-qa.md). Selection and
 image lookup gestures, slider dragging, and keyboard adjustment should also be tried in the

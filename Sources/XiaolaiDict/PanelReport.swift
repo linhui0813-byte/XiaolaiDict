@@ -82,6 +82,9 @@ enum PanelReport {
             _ = Instrument.write(["problem": "the window actions never arrived, so nothing could open"])
             return .failure
         }
+        if let directory = ProcessInfo.processInfo.environment["HUIDICT_LOOKUP_GLASS_EVIDENCE_DIRECTORY"] {
+            return await LookupGlassReport.run(in: app, directory: URL(fileURLWithPath: directory, isDirectory: true))
+        }
         guard let bounded = try? await withDeadline(budget, { await measure(in: app) }) else {
             _ = Instrument.write(["problem": "the panel report exceeded its own \(budget) budget"])
             return .failure

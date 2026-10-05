@@ -394,6 +394,7 @@ struct LookupPanelSceneView: View {
             }
         }
         .frame(minWidth: model.minimumSize.width)
+        .containerBackground(.clear, for: .window)
         .xiaolaiDictPanelBehaviour(transient: true) { window in
             // No chrome and no background of its own: the rounded card is the whole thing the
             // reader sees, and the shadow needs somewhere to fall.

@@ -43,6 +43,9 @@ private struct LookupGlassSurface: ViewModifier {
                     shape.fill(CardSurface.panel(for: scheme).opacity(
                         glass.surfaceOpacity(reduceTransparency: false)))
                         .glassEffect(.clear, in: shape)
+                        // The lookup deliberately never becomes key. Keep only its material
+                        // visually active; making the window key would steal the reader's focus.
+                        .environment(\.appearsActive, true)
                 }
             }
             .overlay(shape.strokeBorder(
