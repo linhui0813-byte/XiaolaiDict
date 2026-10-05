@@ -1,6 +1,36 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Appearance" : {
+
+    },
+    "Liquid Glass" : {
+
+    },
+    "Choose how much of the background shows through." : {
+
+    },
+    "Transparency" : {
+
+    },
+    "More opaque" : {
+
+    },
+    "Clearer" : {
+
+    },
+    "Text and icons stay crisp." : {
+
+    },
+    "Reduce Transparency is enabled in System Settings. The card uses an opaque background." : {
+
+    },
+    "The proposal was refused. We continued reading, looking for a clearer explanation. Each word opened another way to understand the story." : {
+
+    },
+    "Lookup card preview" : {
+
+    },
     " (a guess — not confirmed)" : {
       "comment" : "Appended to copied text where the sense was not confirmed"
     },

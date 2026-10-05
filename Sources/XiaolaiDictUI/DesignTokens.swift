@@ -75,6 +75,13 @@ public enum Token {
         public static let height: CGFloat = 480
     }
 
+    enum Glass {
+        static let transparency = 0.55
+        static let settingsLabelWidth: CGFloat = 112
+        static let previewHeight: CGFloat = 300
+        static let previewParagraphs = 3
+    }
+
     enum Panel {
         static let compactMeaningLimit = 5
         static let compactMeaningLines = 2

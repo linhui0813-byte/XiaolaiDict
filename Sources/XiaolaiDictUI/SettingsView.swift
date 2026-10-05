@@ -225,6 +225,7 @@ public struct SettingsView: View {
     @ViewBuilder private func content(of pane: SettingsPane) -> some View {
         switch pane {
         case .reading: ReadingPane(appearance: appearance, erase: erase, eraseAction: eraseAction)
+        case .appearance: AppearancePane(appearance: appearance)
         case .lookup: LookupPane(policy: hover ?? $unattached, shortcut: shortcut, capture: model.shortcutCapture)
         case .dictionary: DictionaryPane(choice: dictionary)
         case .permissions: PermissionsPane(model: model, openSetup: openSetup)
@@ -245,6 +246,7 @@ public struct SettingsView: View {
 /// window does. A report naming its own panes could drift from the window's and still pass.
 public enum SettingsPane: String, CaseIterable, Identifiable, Sendable {
     case reading
+    case appearance
     case lookup
     case dictionary
     case permissions
@@ -259,6 +261,7 @@ public enum SettingsPane: String, CaseIterable, Identifiable, Sendable {
     public var name: String {
         switch self {
         case .reading: "Reading"
+        case .appearance: "Appearance"
         case .lookup: "Lookup"
         case .dictionary: "Dictionary"
         case .permissions: "Permissions"
@@ -273,6 +276,7 @@ public enum SettingsPane: String, CaseIterable, Identifiable, Sendable {
     var title: LocalizedStringKey {
         switch self {
         case .reading: "Reading"
+        case .appearance: "Appearance"
         case .lookup: "Lookup"
         case .dictionary: "Dictionary"
         case .permissions: "Permissions"
@@ -283,6 +287,7 @@ public enum SettingsPane: String, CaseIterable, Identifiable, Sendable {
     var symbol: String {
         switch self {
         case .reading: "textformat.size"
+        case .appearance: "paintpalette"
         case .lookup: "magnifyingglass"
         case .dictionary: "character.book.closed"
         case .permissions: "lock.shield"

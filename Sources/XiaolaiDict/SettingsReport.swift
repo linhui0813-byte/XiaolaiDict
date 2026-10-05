@@ -1,4 +1,7 @@
 import AppKit
+import ImageIO
+import ScreenCaptureKit
+import XiaolaiDictBase
 import XiaolaiDictUI
 
 /// Whether the settings window is the size of the pane it is showing, and **moves between the
@@ -69,8 +72,33 @@ enum SettingsReport {
         // resize just as the first transition begins to be sampled.
         let openedAtRest = await restingFrame(of: window) { app.settings.heights[opening] != nil }
         var measured: [Pane] = []
+        // Opt-in evidence from the app's own compositor window; normal diagnostics do not capture.
+        let evidenceDirectory = ProcessInfo.processInfo.environment["HUIDICT_SETTINGS_EVIDENCE_DIRECTORY"]
+            .map { URL(fileURLWithPath: $0, isDirectory: true) }
+        var evidence: [String: String] = [:]
+        var evidenceProblems: [String] = []
         for pane in SettingsPane.allCases where pane != opening {
             measured.append(await select(pane, in: app, of: window))
+            if let evidenceDirectory, pane == .appearance || pane == .permissions {
+                window.makeKeyAndOrderFront(nil)
+                NSApp.activate()
+                do {
+                    if pane == .appearance {
+                        let original = app.appearance.lookupGlass
+                        defer { app.appearance.lookupGlass = original }
+                        for value in [0.0, original.transparency, 1.0] {
+                            app.appearance.lookupGlass = LookupGlass(transparency: value)
+                            try await Task.sleep(for: .milliseconds(200))
+                            let name = "Appearance-\(Int((value * 100).rounded()))"
+                            evidence[name] = try await capture(window, name: name, in: evidenceDirectory).path
+                        }
+                    } else {
+                        await app.settings.refresh()
+                        try await Task.sleep(for: .milliseconds(200))
+                        evidence[pane.name] = try await capture(window, name: pane.name, in: evidenceDirectory).path
+                    }
+                } catch { evidenceProblems.append("\(pane.name): \(error)") }
+            }
         }
         measured.append(await select(opening, in: app, of: window))
 
@@ -99,6 +127,8 @@ enum SettingsReport {
             "appeared": true,
             "bundle": Bundle.main.bundleIdentifier ?? "none",
             "insideBundle": Bundle.main.bundleIdentifier != nil,
+            "evidence": evidence,
+            "evidenceProblems": evidenceProblems,
             "panes": measured.map(\.asReport),
             // The window came to rest after opening before anything was measured.
             "openedAtRest": openedAtRest,
@@ -242,6 +272,34 @@ enum SettingsReport {
         }
         return false
     }
+
+    private static func capture(_ window: NSWindow, name: String, in directory: URL) async throws -> URL {
+        // A shared silent probe skips ScreenCaptureKit when permission is absent. Never request it.
+        guard await Permission.screenRecording.probe == .granted else { throw EvidenceError.permissionMissing }
+        let number = CGWindowID(window.windowNumber)
+        let width = Int(window.frame.width * window.backingScaleFactor)
+        let height = Int(window.frame.height * window.backingScaleFactor)
+        let image = try await withDeadline(.seconds(10)) {
+            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            guard let own = content.windows.first(where: { $0.windowID == number })
+            else { throw EvidenceError.windowMissing }
+            let configuration = SCStreamConfiguration()
+            configuration.width = width
+            configuration.height = height
+            configuration.showsCursor = false
+            return try await SCScreenshotManager.captureImage(
+                contentFilter: SCContentFilter(desktopIndependentWindow: own), configuration: configuration)
+        }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent(name).appendingPathExtension("png")
+        guard let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil)
+        else { throw EvidenceError.couldNotWrite }
+        CGImageDestinationAddImage(destination, image, nil)
+        guard CGImageDestinationFinalize(destination) else { throw EvidenceError.couldNotWrite }
+        return url
+    }
+
+    private enum EvidenceError: Error { case permissionMissing, windowMissing, couldNotWrite }
 
     /// Writes the report and answers with `status` — or `.internalError` when it could not be
     /// written, because a measurement that printed nothing must not exit as a pass.

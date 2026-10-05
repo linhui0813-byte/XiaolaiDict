@@ -153,7 +153,7 @@ struct CompactLookupCardView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.tint)
                 .help(Text("Show all meanings, examples, and context"))
             }
         }

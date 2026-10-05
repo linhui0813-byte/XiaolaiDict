@@ -417,7 +417,6 @@ public struct LookupPanelContent: View {
     @Environment(\.translation) private var translator
     @Environment(\.explainer) private var explainer
     @Environment(\.cardOptions) private var options
-    @Environment(\.colorScheme) private var scheme
     @Environment(\.closeLookup) private var close
     public let presentation: LookupPresentation
     /// What it is waiting for, in words. Nil once the dictionaries have answered.
@@ -551,10 +550,7 @@ public struct LookupPanelContent: View {
         // **The card is the window.** Its scene is `.plain`, which draws no background at all, so
         // the surface, the edge and the lift are the card's own — and they live here, in the
         // layer that has the tokens, rather than as literals in the scene that hosts it.
-        .background(CardSurface.panel(for: scheme), in: shape)
-        .overlay(shape.strokeBorder(
-            Color.primary.opacity(Token.Opacity.border), lineWidth: Token.Stroke.hairline))
-        .clipShape(shape)
+        .lookupGlassSurface()
         // A neutral shadow keeps the quick card quiet over the reader's document.
         .shadow(
             color: .black.opacity(Token.Opacity.cardLift),
@@ -600,10 +596,6 @@ public struct LookupPanelContent: View {
     private var alreadyInTheReadersLanguage: Bool {
         guard let sourceLanguage else { return false }
         return SentenceLanguage.same(sourceLanguage, translator.target)
-    }
-
-    private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: scale.radius.lookup, style: .continuous)
     }
 
     @ViewBuilder

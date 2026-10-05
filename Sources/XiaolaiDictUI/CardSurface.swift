@@ -34,11 +34,8 @@ enum CardSurface {
         return accent.opacity(Token.Opacity.accentBorder)
     }
 
-    /// The lookup panel's own surface — **paper, not material.** `.regularMaterial` takes its
-    /// colour from whatever happens to be behind the window, so the card is a different shade over
-    /// a photograph than over an editor, and the word's coloured shadow has nothing steady to sit
-    /// on. Near-white rather than white so the hairline and the shadow have something to be
-    /// against.
+    /// The lookup's neutral wash, and its opaque fallback when Reduce Transparency is enabled.
+    /// Native Liquid Glass provides the optical surface; this color keeps its text readable.
     static func panel(for scheme: ColorScheme) -> Color {
         Color(white: scheme == .dark ? Shade.darkResting.rawValue : 0.985)
     }

@@ -2020,7 +2020,7 @@ else:
     # still deciding — the state this stage was written for, 420 x 320 for all five.
     say(r["distinctHeights"] >= 3,
         f"settings: the window fits each pane ({r['shortest']:g}–{r['tallest']:g} pt over {r['distinctHeights']} heights)",
-        f"settings: only {r['distinctHeights']} distinct heights across five panes — the window is not sizing to its content")
+        f"settings: only {r['distinctHeights']} distinct heights across {len(panes)} panes — the window is not sizing to its content")
     # And moves between them. Zero steps is a jump, however large the change.
     say(r["stepsInBiggestChange"] >= 3,
         f"settings: the {r['biggestChange']:g} pt change to {r['biggestChangePane']} took {r['stepsInBiggestChange']} steps",
@@ -2157,7 +2157,7 @@ else
     # which is what an earlier line here asked for and, being `|| true`, silently never closed.
     pane=$("$helpers/panel" com.xiaolaidict | python3 -c '
 import json, sys
-names = {"Reading", "Lookup", "Dictionary", "Permissions", "About"}
+names = {"Reading", "Appearance", "Lookup", "Dictionary", "Permissions", "About"}
 print(next((t for w in json.load(sys.stdin)["windows"] for t in w["texts"][:1] if t in names), ""))')
     if ! why=$("$helpers/close-window" "${pane:-Lookup}" 2>&1); then
         flunk "shortcut: could not close the settings window afterwards ($why)"

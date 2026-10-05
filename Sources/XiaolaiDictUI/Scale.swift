@@ -345,6 +345,10 @@ public final class Appearance {
         didSet { if drawerGlass != oldValue { store.save(drawerGlass) } }
     }
 
+    public var lookupGlass: LookupGlass {
+        didSet { if lookupGlass != oldValue { store.save(lookupGlass) } }
+    }
+
     private let store: AppearanceStore
 
     public init(store: AppearanceStore = AppearanceStore()) {
@@ -355,6 +359,7 @@ public final class Appearance {
         emphasis = store.loadEmphasis()
         warnsAboutScreenReading = store.loadWarnsAboutScreenReading()
         drawerGlass = store.loadDrawerGlass()
+        lookupGlass = store.loadLookupGlass()
     }
 
     var scale: Scale { Scale(textSize) }
@@ -373,6 +378,7 @@ public struct AppearanceStore {
     static let showsPlaceNameKey = "CardShowsPlaceName"
     static let emphasisKey = "WordEmphasis"
     static let drawerGlassKey = "DrawerGlass"
+    static let lookupGlassKey = "LookupGlassTransparency"
 
     private let defaults: UserDefaults
 
@@ -437,6 +443,15 @@ public struct AppearanceStore {
     func save(_ glass: DrawerGlass) {
         defaults.set(glass.rawValue, forKey: Self.drawerGlassKey)
     }
+
+    func loadLookupGlass() -> LookupGlass {
+        guard let value = defaults.object(forKey: Self.lookupGlassKey) as? Double else { return .standard }
+        return LookupGlass(transparency: value)
+    }
+
+    func save(_ glass: LookupGlass) {
+        defaults.set(glass.transparency, forKey: Self.lookupGlassKey)
+    }
 }
 
 /// Draws a view — and everything inside it — the way the reader has asked for.
@@ -462,5 +477,6 @@ private struct ScaledContent<Content: View>: View {
             .environment(\.scale, appearance.scale)
             .environment(\.cardOptions, appearance.cardOptions)
             .environment(\.drawerGlass, appearance.drawerGlass)
+            .environment(\.lookupGlass, appearance.lookupGlass)
     }
 }

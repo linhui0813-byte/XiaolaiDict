@@ -660,8 +660,12 @@ struct PanelBottomPaddingTests {
         for y in stride(from: rep.pixelsHigh - 1, through: 0, by: -1) {
             var found = false
             for x in stride(from: 8, to: rep.pixelsWide - 8, by: 2) {
-                guard let colour = rep.colorAt(x: x, y: y) else { continue }
-                if colour.brightnessComponent < 0.72, colour.alphaComponent > 0.5 { found = true; break }
+                guard let colour = rep.colorAt(x: x, y: y)?.usingColorSpace(.sRGB) else { continue }
+                // HSB brightness treats a blue action as bright white. Perceived luminance
+                // also finds the native blue “More meanings” control below the definitions.
+                let luminance = colour.redComponent * 0.2126
+                    + colour.greenComponent * 0.7152 + colour.blueComponent * 0.0722
+                if luminance < 0.72, colour.alphaComponent > 0.5 { found = true; break }
             }
             if found { lastInk = y; break }
         }
