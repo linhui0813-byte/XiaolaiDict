@@ -87,6 +87,7 @@ package lock:
 
 ```sh
 cd Previews/LiquefyGlass
+npm ci --ignore-scripts --no-audit --no-fund
 npm run build:native
 cd ../..
 python3 Tools/verify-liquefy.py Resources/LiquefyGlass
