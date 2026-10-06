@@ -45,6 +45,7 @@ final class LiquefyBackdropStream: LiquefyGlassBackdropSession {
                 let configuration = Self.configuration(for: region)
                 if let existing = self.stream {
                     try await existing.updateConfiguration(configuration)
+                    self.diagnostic = "streaming"
                     return
                 }
                 self.diagnostic = "finding-window"

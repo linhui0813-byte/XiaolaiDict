@@ -78,6 +78,7 @@ private struct LookupGlassSurface: ViewModifier {
                             .allowsHitTesting(false)
                             .accessibilityHidden(true)
                     }
+                    .clipShape(shape)
                 }
                 // This window must stay non-key. The environment changes visual activity only.
                 .environment(\.appearsActive, true)

@@ -48,7 +48,7 @@ export class NativeOptics {
     this.canvas = canvas;
     this.frames = 0;
     this.darkBackdrop = null;
-    this.sample = document.createElement('canvas'); this.sample.width = 1; this.sample.height = 1;
+    this.sample = document.createElement('canvas'); this.sample.width = 16; this.sample.height = 16;
     this.revision = 0;
     this.gl = canvas.getContext('webgl2', { alpha: false, antialias: false, preserveDrawingBuffer: true });
     if (!this.gl) throw new Error('WebGL 2 is unavailable.');
@@ -72,7 +72,9 @@ export class NativeOptics {
     gl.enableVertexAttribArray(position); gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
     this.textures = [0, 1].map(unit => {
       const texture = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      // The backdrop's explicit textureLod samples need a mipmap-enabled filter.
+      // LINEAR pins samples to level zero, producing nine sharp copies of text.
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, unit === 0 ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -111,9 +113,16 @@ export class NativeOptics {
   async updateFrame(url) {
     const image = await loadImage(url);
     const context = this.sample.getContext('2d', { willReadFrequently: true });
-    context.drawImage(image, 0, 0, 1, 1);
-    const [r,g,b] = context.getImageData(0,0,1,1).data;
-    const luminance = (r*.2126 + g*.7152 + b*.0722) / 255;
+    // A one-pixel resize can select a white letter on a dark page in WebKit.
+    // Average a small grid so foreground contrast follows the page, not one glyph.
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(image, 0, 0, this.sample.width, this.sample.height);
+    const pixels = context.getImageData(0, 0, this.sample.width, this.sample.height).data;
+    let luminance = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      luminance += pixels[i]*.2126 + pixels[i+1]*.7152 + pixels[i+2]*.0722;
+    }
+    luminance /= (pixels.length / 4) * 255;
     if (this.darkBackdrop === null) this.darkBackdrop = luminance < .5;
     else if (luminance < .4) this.darkBackdrop = true;
     else if (luminance > .6) this.darkBackdrop = false;

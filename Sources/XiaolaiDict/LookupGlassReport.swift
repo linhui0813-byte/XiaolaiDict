@@ -1,4 +1,5 @@
 import AppKit
+import CoreImage
 import DictionaryModel
 import ImageIO
 import ScreenCaptureKit
@@ -45,12 +46,15 @@ enum LookupGlassReport {
                                           y: screen.visibleFrame.midY - window.frame.height / 2))
             let backdrop = NSWindow(contentRect: window.frame.insetBy(dx: -40, dy: -40),
                                     styleMask: .borderless, backing: .buffered, defer: false)
-            backdrop.level = .normal
+            // Keep the test page directly below the card, above other apps' windows.
+            // Including windows in a screenshot alone does not prove that they are visible
+            // behind the card in the live display stream.
+            backdrop.level = window.level
             backdrop.ignoresMouseEvents = true
             backdrop.isOpaque = true
             let readingBackdrop = ReadingBackdrop()
             backdrop.contentView = readingBackdrop
-            backdrop.orderFrontRegardless()
+            backdrop.order(.below, relativeTo: window.windowNumber)
             defer { backdrop.orderOut(nil) }
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             var captures: [String: String] = [:]
@@ -67,8 +71,8 @@ enum LookupGlassReport {
                                                        includesCard: false)
                 captures["\(page.rawValue)-Background"] = try save(referenceImage,
                     name: "\(page.rawValue)-Background", in: directory).path
-                let reference = try interior(referenceImage, scale: screen.backingScaleFactor)
-                var readings: [Int: [UInt8]] = [:]
+                let reference = try Reading(referenceImage, scale: screen.backingScaleFactor)
+                var readings: [Int: Reading] = [:]
                 for value in Set([0.0, 0.25, 0.55, 0.75, original.transparency, 1.0]).sorted() {
                     // Mutate the same observable preference as the slider while this card stays open.
                     app.appearance.lookupGlass = LookupGlass(transparency: value)
@@ -77,32 +81,40 @@ enum LookupGlassReport {
                     let percentage = Int((value * 100).rounded())
                     let name = "\(page.rawValue)-\(percentage)"
                     captures[name] = try save(image, name: "Lookup-\(name)", in: directory).path
-                    readings[percentage] = try interior(image, scale: screen.backingScaleFactor)
+                    readings[percentage] = try Reading(image, scale: screen.backingScaleFactor)
                     states.append(["backdrop": page.rawValue, "transparency": value,
                                    "windowNumber": window.windowNumber, "isKey": window.isKeyWindow,
                                    "appIsActive": NSApp.isActive,
                                    "renderer": await LiquefyGlassStatus.report(in: window)])
                 }
                 guard let opaque = readings[0], let clear = readings[100] else { throw Failure.imageMissing }
-                let opaqueCorrelation = try correlation(opaque, reference)
-                let clearCorrelation = try correlation(clear, reference)
+                let opaqueCorrelation = try correlation(opaque.structure, reference.structure)
+                let clearCorrelation = try correlation(clear.structure, reference.structure)
                 transmission[page.rawValue] = ["opaqueCorrelation": opaqueCorrelation,
                                               "clearCorrelation": clearCorrelation,
-                                              "gain": clearCorrelation - opaqueCorrelation]
+                                              "gain": clearCorrelation - opaqueCorrelation,
+                                              "sharpOpaqueCorrelation": try correlation(opaque.raw, reference.raw),
+                                              "sharpClearCorrelation": try correlation(clear.raw, reference.raw)]
             }
-            guard let paper = transmission[ReadingBackdrop.Page.paper.rawValue] else { throw Failure.imageMissing }
-            let responds = paper["clearCorrelation", default: 0] > 0.35 && paper["gain", default: 0] > 0.2
+            let responds = transmission.count == ReadingBackdrop.Page.allCases.count && transmission.values.allSatisfy {
+                $0["clearCorrelation", default: 0] > 0.35 && $0["gain", default: 0] > 0.2
+            }
+            let darkStates = states.filter { $0["backdrop"] as? String == ReadingBackdrop.Page.dark.rawValue }
+            let adaptsToDark = !darkStates.isEmpty && darkStates.allSatisfy {
+                ($0["renderer"] as? [String: Any])?["darkBackdrop"] as? Bool == true
+            }
             let report: [String: Any] = [
                 "bundle": Bundle.main.bundleIdentifier ?? "none", "evidence": captures,
                 "states": states, "backdropTransmission": transmission,
-                "cardRespondsToTransparency": responds, "term": "latest",
+                "cardRespondsToTransparency": responds, "foregroundAdaptsToDarkBackdrop": adaptsToDark,
+                "structureSmoothingPoints": Reading.smoothingPoints, "term": "latest",
                 "appWasActive": activeBefore, "frontmostBefore": frontBefore,
                 "frontmostAfter": NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "none",
                 "restoredTransparency": original.transparency,
                 "renderer": renderer,
             ]
             guard Instrument.write(report) else { return .failure }
-            return responds ? .success : .failure
+            return responds && adaptsToDark ? .success : .failure
         } catch {
             _ = Instrument.write(["problem": String(describing: error)])
             return .failure
@@ -125,6 +137,27 @@ enum LookupGlassReport {
             width: CGFloat(image.width) - inset * 2, height: CGFloat(image.height) - inset * 2)),
               let reading = HistoryReport.Capture(image: cropped) else { throw Failure.imageMissing }
         return reading.luminance
+    }
+
+    @MainActor
+    private struct Reading {
+        // Compare visible page structure. Glass intentionally suppresses sharp glyph detail;
+        // correlating only raw pixels falsely rejects a correctly softened backdrop.
+        // Keep both measurements and retain the same transmission thresholds for every page.
+        static let smoothingPoints: CGFloat = 2
+        let raw: [UInt8]
+        let structure: [UInt8]
+
+        init(_ image: CGImage, scale: CGFloat) throws {
+            raw = try interior(image, scale: scale)
+            let source = CIImage(cgImage: image)
+            let smoothed = source.clampedToExtent().applyingGaussianBlur(sigma: Self.smoothingPoints * scale)
+                .cropped(to: source.extent)
+            guard let result = CIContext().createCGImage(smoothed, from: source.extent) else {
+                throw Failure.imageMissing
+            }
+            structure = try interior(result, scale: scale)
+        }
     }
 
     private static func correlation(_ image: [UInt8], _ reference: [UInt8]) throws -> Double {

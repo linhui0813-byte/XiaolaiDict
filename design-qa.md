@@ -1,13 +1,20 @@
 # Native Liquefy UI integration QA
 
-final result: needs review
+final result: pass
 
 The native integration is built and installed on `feature/liquefy-ui-trial`.
-The build, signatures, update identity, permission reports, and dictionary
-service checks pass. Live optical and gesture verification remains pending:
-the desktop is locked, both displays are asleep, and ScreenCaptureKit returns
-an empty display list. This report does not claim a completed visual review.
+The build, signatures, update identity, permission reports, live backdrop,
+transparency endpoints, dark-page contrast, and Appearance preview checks pass.
+This verdict covers native rendering and the shared preference. Pointer dragging
+of the slider, detailed-card controls, and physical shortcut/image-hover gestures
+remain unverified. Hui's visual acceptance is separate from these checks.
 The prior browser result is retained in [preview QA](design-qa-liquefy-preview.md).
+
+[Native transparency comparison](docs/liquefy-native-transparency.png),
+[installed Appearance pane](docs/liquefy-native-appearance.png),
+[dark-page card](docs/liquefy-native-dark.png), and
+[installed Permissions pane](docs/liquefy-native-permissions.png) are actual
+native screenshots of the app's own test content, not generated mockups.
 
 ## Implementation
 
@@ -37,6 +44,13 @@ background independently of the foreground. Reduce Transparency uses the opaque
 native surface. Reduce Motion suppresses the animated rim. Mostly clear cards
 adapt foreground colors to the captured background's luminance.
 
+Live review corrected two renderer issues. The backdrop texture now enables
+mipmap filtering so its blur blends text smoothly instead of drawing repeated
+sharp copies. Foreground contrast now uses the average of a 16 by 16 sample
+instead of a single resized pixel that could pick a white glyph on a dark page.
+The complete background is clipped to the native card shape, including the
+Appearance preview's corners.
+
 ## Verification completed
 
 - `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer make local` passed
@@ -49,14 +63,32 @@ adapt foreground colors to the captured background's luminance.
   manifest before signing and includes licenses for every rendered package.
 - Strict signatures, component host hashes, and compatibility with the installed
   certificate-based signing requirement passed before and after installation.
-- Native diagnostic runtime reported actual library version `1.0.0`, lens map
-  present, rim shader present, and the saved transparency preference delivered
-  to JavaScript. No backdrop frames arrived while the desktop was locked.
-- Both direct and LaunchServices native diagnostic launches encountered the
-  same missing capture display. A separate silent AppKit/ScreenCaptureKit probe
-  reported `CGSSessionScreenIsLocked = 1`, display asleep, and zero shareable
-  displays. This distinguishes the current environmental block from a claim
-  that the card's optical rendering was visually verified.
+- The installed native diagnostic reported actual library version `1.0.0`,
+  a lens map and rim shader, a running capture stream, and delivered frames.
+  All 18 readings were ready and received the requested transparency value.
+  The same open native card changed across 0%, 25%, 55%, the saved 73%, 75%,
+  and 100% over Paper, Colored, and Dark pages. The original preference was restored.
+- At 0% the body is opaque. At 100% the live page is transmitted through a
+  softened and refracted background. The test page is ordered directly below
+  the card so the screenshot reference and the live stream see the same page.
+  Correlation of visible page structure at the clear endpoint was 0.730 for
+  Paper, 0.880 for Colored, and 0.557 for Dark; gains over opaque were 0.795,
+  0.953, and 0.510. The unchanged thresholds of 0.35 correlation and 0.20 gain
+  pass for every page. A two-point smoothing of both readings measures the
+  structure that glass should preserve; raw sharp-pixel measurements are also
+  retained, because blur intentionally removes fine glyph detail.
+- Dark-page frames correctly switch the mostly clear card to light foreground
+  text. All optical readings kept the card non-key and the app inactive; the
+  frontmost application was unchanged throughout the installed optical run.
+- The installed Settings diagnostic captured opaque and clear Appearance
+  previews and both permission grants On. Every pane settled, the window kept
+  one width, and pane transitions had no reversal or overshoot. These captures
+  change the shared preference programmatically; they do not prove pointer dragging.
+- A separate card-click diagnostic kept the window non-key but activated HuiDict.
+  Running the same diagnostic against the signed pre-integration rollback
+  (`2026.1005.155745`) produced the same activation, frame, and menu behavior.
+  This is an existing focus limitation, not a Liquefy regression. The card
+  survived the click and the diagnostic's menu selection in both builds.
 - Three fresh installed `--permission-report` processes returned exit zero,
   `bundle = com.linhui.huidict`, and both grants present, including three new
   processes after restarting the normal app. Normal app TCC decisions
@@ -66,30 +98,35 @@ adapt foreground colors to the captured background's luminance.
 
 ## Installation
 
-Installed build: `2026.1006.21702` at `~/Applications/HuiDict.app`.
+Installed build: `2026.1006.94610` at `~/Applications/HuiDict.app`.
 The update used the original persistent certificate and bundle identifier
 `com.linhui.huidict`. The bundle was installed with an atomic exchange; the old
 build is retained as
+`~/Applications/HuiDict.rollback-2026.1006.21702-liquefy-20261006T094719Z.app`.
+The earlier pre-integration rollback is also retained at
 `~/Applications/HuiDict.rollback-2026.1005.155745-liquefy-20261006T022328Z.app`.
 The normal installed app is left running. No permissions were reset.
 
 Local evidence is retained in `.build/liquefy-native-build.log`,
-`.build/liquefy-native-qa-report.json`, `.build/liquefy-native-ls-report.json`,
+`.build/liquefy-native-qa-report.json`, `.build/liquefy-native-settings-report.json`,
 `.build/liquefy-native-install.json`, `.build/liquefy-native-permission-reports.json`,
-`.build/liquefy-native-own-tcc.log`, and
+`.build/liquefy-native-own-tcc-decisions.log`, and
 `.build/liquefy-native-installed-lookups.jsonl`.
+The focus comparison is in `.build/liquefy-native-controls-report.json` and
+`.build/liquefy-native-controls-baseline.json`.
 
 ## Review still required
 
-An unlocked desktop is required to verify live frame delivery, the actual 0%
-and 100% floating-card transmission over light/colored/dark reading pages, the
-Appearance slider and sample renderer, detailed-card resizing, and repeated
-selection/image lookup gestures. No native screenshot from this integration
-is presented as accepted design evidence yet. The prior browser captures apply
-only to the browser preview. Audio output and sustained CPU/GPU usage have not
-been measured for this native integration.
+End-to-end pointer dragging of the Appearance slider, detailed-card resizing
+and controls, and repeated physical selection/image lookup gestures still need
+review. The automation could not attach to the normal menu-only app without a
+visible window. Its generated shortcut changed the temporary TextEdit document
+instead of completing a valid selection lookup; those attempts are not counted
+as successful gesture checks. No user document was changed.
+Audio output and sustained CPU/GPU usage have not been measured for this native
+integration. The prior browser captures apply only to the browser preview.
 
-To collect the native card evidence after unlocking:
+To repeat the native optical check on an unlocked desktop:
 
 ```sh
 HUIDICT_LOOKUP_GLASS_EVIDENCE_DIRECTORY="$PWD/.build/liquefy-native-qa" \

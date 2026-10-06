@@ -75,6 +75,13 @@ Reduce Transparency uses the opaque native surface; Reduce Motion disables the
 animated rim. Foreground colors adapt to dark and light captured backgrounds once
 the surface is mostly clear.
 
+The native backdrop uses mipmap filtering for a smooth blur, and foreground
+contrast follows an averaged 16 by 16 brightness sample. The complete surface
+is clipped to the native rounded card. [Native transparency screenshots](../../docs/liquefy-native-transparency.png)
+and the [installed Appearance pane](../../docs/liquefy-native-appearance.png)
+show the result. The optical diagnostic checks 18 readings across three native
+reading pages and restores the saved transparency afterward.
+
 Rebuild the embedded surface after changing `native/`, its build script, or the
 package lock:
 
