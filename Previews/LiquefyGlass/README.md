@@ -27,21 +27,26 @@ Open the local URL printed by the server in Chrome or another Chromium browser.
 
 ## Material controls
 
-- Transparency maps 0–100 to Liquefy's surface `veil` of 1–0. The maximum surface
-  fill is overridden to opaque white (or dark navy on the dark backdrop) so 0%
-  is genuinely opaque. Foreground text and controls retain opacity 1.
-- Frost decreases from 6.5 px to 1.5 px with transparency. The actual library lens
-  refracts the live reading page with a 24 px bezel, curve 2, and refraction 1.
+- Transparency maps 0–100 to Liquefy's surface `veil` of 1–0 using
+  `(1 - transparency / 100) ** 1.45`. This gives the middle of the range a clearer
+  body while retaining a genuinely opaque white endpoint (dark navy on the dark
+  backdrop). Foreground text and controls retain opacity 1.
+- Frost decreases from 10.5 px to 4.5 px with transparency. The actual library lens
+  refracts the live reading page with a 30 px bezel, curve 2.4, and refraction 0.92.
   Background paragraphs are real DOM text, not an embedded screenshot.
-- Shader highlights keep a minimum strength at the clear endpoint. A faint rim
-  and shadow remain so the clear card still reads as a glass surface.
-- `interactive={false}` holds the card still. The provider's motion remains on
+- Shader highlights keep a minimum strength of 0.85 at the clear endpoint. A
+  brighter rim, inset reflections, and a soft shadow keep the boundary visible.
+  The reading page has less blue tint, and the stronger blur softens background
+  words so they compete less with the larger 16 px definitions.
+- `interactive={false}` disables pointer-driven tilt. The provider's motion remains on
   because Liquefy's current shader controller also requires that setting.
   Reduce Motion disables motion and WebGL; Reduce Transparency forces the opaque
   endpoint and disables the slider. These preferences are observed dynamically.
 - Background choices test a plain reading page, a blue/lilac environment, and
   a dark reading page. At maximum transparency, background words are intentionally
   more visible; lower values give a quieter surface for reading definitions.
+- Search returns keyboard focus to its button after a lookup or Escape. A second
+  Escape closes the card. Sample reading sentences follow the selected word.
 
 ## Native compatibility
 

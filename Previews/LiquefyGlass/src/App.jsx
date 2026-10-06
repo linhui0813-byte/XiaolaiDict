@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LiquidGlass, LiquefyProvider, LiquidSlider } from '@liquefy-ui/react';
 import { ChevronRightIcon, SearchIcon, XIcon } from '@liquefy-ui/icons';
 import { Volume2 } from 'lucide-react';
@@ -10,18 +10,21 @@ const entries = {
     rows: [['v.', '拒绝（refuse 的过去式和过去分词）'], ['v.', '不接受；拒收'], ['adj.', '遭拒绝的，被拒绝的']],
     example: 'She refused to give up.',
     note: 'Past tense and past participle of refuse.',
+    context: ['The proposal was ', '. We paused, considered the details, and returned with a different perspective.'],
   },
   latest: {
     phonetic: '/ˈleɪtɪst/',
     rows: [['adj.', '最新的'], ['adj.', '最近的；晚的；迟的'], ['n.', '最新消息；最新事物']],
     example: 'Have you read the latest news?',
     note: 'Superlative form of late.',
+    context: ['We read the ', ' news and paused to consider the details. A different perspective can change how we understand a story.'],
   },
   appearance: {
     phonetic: '/əˈpɪərəns/',
     rows: [['n.', '外观'], ['n.', '到来；外表；出版；出庭；演出']],
     example: 'The appearance of the card changes as you move the slider.',
     note: 'The way someone or something looks.',
+    context: ['The ', ' of the page changed as the light moved across the room. We paused to look a little closer.'],
   },
 };
 
@@ -42,6 +45,7 @@ function DictionaryCard({ word, transmission, onClose, onWordChange }) {
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
   const [message, setMessage] = useState('');
+  const searchButton = useRef(null);
   useEffect(() => { setExpanded(false); setMessage(''); }, [word]);
 
   const lookup = (event) => {
@@ -54,6 +58,7 @@ function DictionaryCard({ word, transmission, onClose, onWordChange }) {
     onWordChange(next);
     setSearching(false);
     setQuery('');
+    searchButton.current?.focus();
   };
   const pronounce = () => {
     if (!('speechSynthesis' in window)) {
@@ -64,19 +69,34 @@ function DictionaryCard({ word, transmission, onClose, onWordChange }) {
     const utterance = new SpeechSynthesisUtterance(word);
     utterance.lang = 'en-GB';
     utterance.rate = 0.85;
-    utterance.onerror = () => setMessage('Pronunciation is unavailable. Please try again.');
+    utterance.onerror = (event) => {
+      if (!['canceled', 'interrupted'].includes(event.error)) {
+        setMessage('Pronunciation is unavailable. Please try again.');
+      }
+    };
     window.speechSynthesis.speak(utterance);
   };
 
   return (
-    <LiquidGlass className="dictionary-card" radius={28} padding={23} interactive={false}
-      frost={1.5 + (1 - transmission) * 5} softness={0.6} bezel={24} curve={2} saturation={1.12}
-      role="dialog" aria-labelledby="entry-word" id="dictionary-card">
+    <LiquidGlass className="dictionary-card" radius={30} padding={24} interactive={false}
+      frost={4.5 + (1 - transmission) * 6} softness={0.4} bezel={30} curve={2.4} saturation={1.08}
+      role="dialog" aria-labelledby="entry-word" id="dictionary-card"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.stopPropagation();
+          if (searching) {
+            setSearching(false);
+            setMessage('');
+            searchButton.current?.focus();
+          }
+          else onClose();
+        }
+      }}>
       <header className="entry-header">
         <h2 id="entry-word">{word}</h2>
         <div className="entry-actions">
           <button className="icon-button" aria-label="Close dictionary card" onClick={onClose}><XIcon /></button>
-          <button className="icon-button" aria-label="Search preview words" aria-expanded={searching}
+          <button ref={searchButton} className="icon-button" aria-label="Search preview words" aria-expanded={searching}
             onClick={() => { setSearching(!searching); setMessage(''); }}><SearchIcon /></button>
         </div>
       </header>
@@ -109,11 +129,12 @@ function DictionaryCard({ word, transmission, onClose, onWordChange }) {
 }
 
 function ReadingPage({ word }) {
+  const [before, after] = entries[word].context;
   return <article className="reading-page" aria-label="Reading background">
     <div className="reading-label">A MOMENT TO READ</div>
     <h2>A clearer perspective</h2>
     <p>Progress comes from paying attention. We continued reading, looking for a clearer explanation. Each word opened another way to understand the story.</p>
-    <p>The proposal was <mark>{word}</mark>. We paused, considered the details, and returned with a different perspective. A small change can make familiar things feel new again.</p>
+    <p>{before}<mark>{word}</mark>{after} A small change can make familiar things feel new again.</p>
     <p>Beyond the window, the light shifted across the room. The page stayed still while the world carried on around it.</p>
     <p>There is always more to discover when we take the time to look a little closer.</p>
   </article>;
@@ -145,7 +166,7 @@ export function App() {
           <div className="stage" data-backdrop={backdrop}>
             <ReadingPage word={word} />
             <LiquefyProvider theme={dark ? 'dark' : 'light'} motion={!reducedMotion} webgl={!reducedMotion} lens={transmission > 0}
-              refraction={1} veil={1 - transmission} intensity={1.4}
+              refraction={0.92} veil={Math.pow(1 - transmission, 1.45)} intensity={1.4}
               glow shimmer tint="#8f8f8f" className="glass-layer">
               {visible ? <DictionaryCard word={word} transmission={transmission} onClose={() => setVisible(false)} onWordChange={setWord} />
                 : <button className="show-card" onClick={() => setVisible(true)}>Show dictionary card</button>}

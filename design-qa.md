@@ -1,107 +1,117 @@
-# Liquefy UI trial design QA
+# Liquefy UI refinement design QA
 
 final result: passed
 
-This result covers the browser trial on `feature/liquefy-ui-trial`. It does not
-claim native integration or exact reproduction of Apple's Liquid Glass. The
-[previous native transparency QA](design-qa-native-transparency.md) is preserved
-as historical evidence for the unchanged app.
+This result covers the refined browser preview on `feature/liquefy-ui-trial`.
+Native integration remains pending. The result does not claim exact reproduction
+of Apple's Liquid Glass. The [native transparency QA](design-qa-native-transparency.md)
+is historical evidence for the unchanged native app. The original browser trial
+report is retained in commit `8c6c7f6`.
 
 ## Findings and fixes
 
-- **Resolved P1 — the first card remained a frosted plate.** The first browser
-  render used Liquefy's `GlassCard`, whose light-theme data-surface stylesheet
-  adds 7 px of blur. Disabling provider motion also prevented its shader controller
-  from drawing highlights. The revised implementation uses the actual package's
-  `LiquidGlass`, 1.5–6.5 px frost, and a static non-interactive card with the shader
-  controller enabled. The combined material comparison shows the thinner surface,
-  refracted reading details, and illuminated boundary after the change.
-- **Resolved P1 — the compact viewport clipped the card's right-hand controls.**
-  The first 390 px capture shows the search action and submit button cut off.
-  The grid now has a `minmax(0, 1fr)` track, the card allows shrinking, and the
-  stage grows with expanded content. The matched revised capture shows all
-  controls, definitions, extra meanings, and error copy within the stage.
-- **Resolved P2 — pronunciation had a generic play icon.** A Lucide speaker
-  icon replaces it, with stroke weight and size aligned to the library's search
-  and close icons. These are real library assets, not handcrafted SVG substitutes.
+- **Resolved P1 — transmitted background words competed with definitions.**
+  Frost now ranges from 10.5 to 4.5 px instead of 6.5 to 1.5 px. Background details
+  remain visible but become softer bands. Definitions increase from 15 to 16 px,
+  and the word increases from 27 to 29 px. Foreground opacity remains 1.
+- **Resolved P2 — the blue surface looked flat beside the selected design.**
+  The reading page's white fill increases from 0.5 to 0.84, reducing the blue cast.
+  Surface veil now follows `(1 - transparency / 100) ** 1.45`, giving the middle
+  settings a clearer body. The wider refracting bezel, stronger shader rim,
+  inset reflections, and soft shadow make the boundary more distinct.
+- **Resolved P2 — keyboard focus disappeared when search closed.** Search now
+  returns focus to its button after a lookup or Escape. A second Escape closes
+  the card. Normal speech cancellation no longer displays an error.
+- **Resolved P2 — the reading sentence did not fit every sample word.**
+  `latest` and `appearance` now have their own grammatical reading contexts.
 
-No actionable P0/P1/P2 issue remains in the captured trial states. Maximum
-transparency deliberately transmits more background text; lower settings give
-stronger separation. That tradeoff is visible in the endpoint comparison and
-is not evidence of an Apple-equivalent native material.
+No actionable P0/P1/P2 issue remains in the tested preview states. At maximum
+transparency the reading page remains visible by design; lower values provide
+stronger separation. The existing compact layout remains intact.
 
 ## Source and rendered evidence
 
-- Source layout: [selected Appearance design](docs/liquid-glass-design.png),
-  1487 × 1058 px. Material reference captured from the upstream
-  [Card](https://liquefy-ui.com/#/components/card) and
-  [Glass](https://liquefy-ui.com/#/components/glass) documentation before building;
-  original captures are in `.build/liquefy-qa/source-card.png` and `source-glass.png`.
-- Implementation: [actual browser preview](docs/liquefy-ui-trial-preview.png),
-  1280 × 900 px. CSS viewport 1280 × 900, device scale 1, PNG 1 px per CSS px.
-  Default state: `refused`, color background, 68%, closed search/details.
-- [Full comparison](docs/liquefy-ui-trial-comparison.png), 1680 × 461 px, contains
-  the selected design, first browser render, and final browser render in one image.
-  Source and final use 55%; the first render used its 68% default. Each full
-  canvas is proportionally normalized into a 540 px wide region for composition.
-- [Focused card comparison](docs/liquefy-ui-trial-material-comparison.png),
-  1260 × 356 px, normalizes the 544 × 380 source crop and 404 × 307 browser crops
-  into equal 400 px wide slots. Original generated-reference display density is
-  unknown; it is an art-direction comparison rather than a pixel-perfect clone.
-- [0% and 100%](docs/liquefy-ui-trial-transparency.png), 880 × 376 px, uses the
-  same color page, card content, viewport, and 424 × 327 crop at both endpoints.
-  Captures wait for CSS transitions to finish. Foreground opacity stays 1.
-- [Compact layout before and after](docs/liquefy-ui-trial-narrow-comparison.png),
-  820 × 886 px, compares 390 × 844 browser views at scale 1, `latest`, reading
-  background, 57%, expanded meanings, open search, and an unknown-word message.
-  The revised stage grows vertically; both are full-page captures.
+- Layout source: [selected Appearance design](docs/liquid-glass-design.png),
+  1487 × 1058 px, `refused`, 55%. The source is a generated design reference;
+  its original display density is unknown.
+- Implementation: [refined browser preview](docs/liquefy-ui-trial-preview.png),
+  1280 × 900 px. CSS viewport 1280 × 900, device scale 1, 1 PNG px per CSS px.
+  Default state: `refused`, Color background, 68%, closed search/details.
+- [Matched before/after](docs/liquefy-ui-refinement-comparison.png),
+  1320 × 506 px, compares the previous and refined implementations at 68%.
+  Both 1280 × 900 browser canvases are scaled proportionally to 640 px wide.
+- [Source and both implementations](docs/liquefy-ui-refinement-source-comparison.png),
+  1680 × 440 px, compares the selected design, previous trial, and refinement at
+  55%. Each canvas is scaled proportionally into a 540 px wide slot.
+- [Focused material comparison](docs/liquefy-ui-refinement-material-comparison.png),
+  1260 × 370 px, contains the same three 55% states at 400 px wide. Crops are
+  source `(677,309)-(1221,689)`, previous `(537,208)-(945,528)`, and refined
+  `(531,205)-(951,532)`. This is an art-direction comparison, not a pixel clone.
+- [Opaque and clear endpoints](docs/liquefy-ui-trial-transparency.png),
+  880 × 383 px, compares 0% and 100% with identical content, Color background,
+  viewport, and `(531,205)-(951,532)` crop. Finite CSS transitions settle before
+  capture; the card remains 400 × 306.34 CSS px at both endpoints.
+- [Compact expanded state](docs/liquefy-ui-refinement-narrow.png), 390 × 844 px,
+  uses `latest`, Reading background, 57%, expanded meanings, open search,
+  and an unknown-word message. The card and controls fit within the stage.
 
-The website documentation's layout is not cloned. The chosen library supplies
-material rendering while HuiDict's selected word-card anatomy and Appearance
-panel supply the content/layout direction. The generated wallpaper is replaced
-by a controllable live reading page; the background alternatives are test
-conditions, not substitute assets presented as Apple's wallpaper.
+The previous implementation captures are retained in the ignored
+`.build/liquefy-qa` directory; refinement captures are in
+`.build/liquefy-refinement`. Combined evidence is committed above. The browser's
+pink translation control visible in some full captures is not preview UI.
 
 ## Required fidelity surfaces
 
 | Surface | Result |
 | --- | --- |
-| Fonts and typography | macOS system UI font, 27 px bold word, 15 px definitions and pronunciation, 14 px action. Word/header/body/action hierarchy and Chinese content match the selected anatomy. Reader text uses Georgia deliberately as the background. Text remains opaque and wraps within the shrinking card. |
-| Spacing and layout | 384 × approximately 288 CSS px default card, 23 px padding, 28 px corners; header divider, pronunciation gap, three meaning rows, and trailing action preserved. The controls and compact expanded state remain visible. The browser panel is wider than the native Settings window to support comparison. |
-| Colors and material | 0% settles to opaque white; 100% settles to fully transparent surface fill with a refracting lens and persistent rim/shadow. At 55% the body is more translucent than the selected mock. This is the requested stronger glass trial, not accidental text fading. Dark background uses light foreground and a dark opaque endpoint. |
-| Image quality and assets | Live DOM reading content is filtered by the actual library. WebGL canvas rendered at 382 × 286 internal px on the 384 × 288 card and reported no fallback. No screenshot is embedded behind the card. Liquefy icons and Lucide speaker retain vector sharpness. The pink floating browser translation control visible in some evidence is browser chrome, not preview UI. |
-| Copy and content | Appearance, Liquid Glass description, transparency percentage, endpoint labels, helper text, and More meanings preserve the approved copy. Three fixed sample entries are available; search errors describe that scope. No preview text claims a live dictionary service. |
+| Fonts and typography | macOS system UI font; 29 px bold word, 16 px definitions, 15 px pronunciation, 14 px More meanings. The selected header/body/action hierarchy and Chinese definitions are preserved. Compact mode uses 25 px word and 14 px definitions. Reader text deliberately uses Georgia. |
+| Spacing and layout | Default card is 400 × 306.34 CSS px with 24 px padding and 30 px corners. Divider, pronunciation gap, three meaning rows, and trailing action preserve the source anatomy. Circular header controls are 30 px. The browser Appearance panel is wider than the source/native Settings panel. |
+| Colors and material | Default 68% settles to white surface alpha 0.191632 and 6.42 px blur. The actual Liquefy lens refracts live content with a 30 px bezel, curve 2.4, refraction 0.92. At 0% the fill is opaque white; at 100% it is transparent with 4.5 px blur and a persistent illuminated rim. Dark background uses light text and a navy opaque endpoint. |
+| Image quality and assets | Actual published Liquefy UI 1.0.0 supplies the optical rendering. Its shader canvas is 398 × 304 internal px on the default card. Background paragraphs are live DOM text. Liquefy search/close icons and the Lucide speaker remain vector assets. No screenshot is embedded behind the card. |
+| Copy and content | Appearance, material description, transparency value, endpoint captions, and helper text preserve the selected copy. Search accepts the three documented preview words, and unknown words receive a clear scope explanation. More/Fewer meanings work. Sample reading sentences now follow the selected word. |
 
-## Browser checks
+The generated wallpaper is represented by controllable Reading, Color, and Dark
+backgrounds. This is deliberate test content. The website documentation's layout
+is not being cloned; its package supplies rendering for HuiDict's selected card.
 
-- `npm run build` passed with the pinned published Liquefy UI 1.0.0 packages.
+## Browser validation
+
+- `npm run build` passed after the final source change, with packages pinned by
+  `package-lock.json`. The running local server serves `dist/client`.
 - Keyboard Home/End reached 0%/100%; ArrowRight incremented 0% to 1%.
-  A pointer drag moved the displayed value to 57% and changed the rendered material.
-- At settled 0% the computed fill was opaque white. At settled 100% it was
-  transparent, with `blur(1.5px)` and a live `url(#lq-lens-...)` backdrop filter.
-  Card and definition opacity both remained 1. The shader canvas was active.
-- Reading, Color, and Dark buttons switched the actual backdrop. Dark at maximum
-  was visually inspected. More/Fewer meanings, close/reopen, valid `latest`
-  search, and invalid sample search passed through actual UI actions.
-- The revised 390 px expanded card remained within the stage with no horizontal
-  document overflow. The 1280 px default state also had no horizontal overflow.
-- Per-tab simulation of Reduce Motion and Reduce Transparency forced the opaque
-  fill, disabled the slider, removed the lens and shader canvas, and displayed
-  the preference explanation. Simulation was cleared afterwards; OS settings
-  were not changed. Default 68% was restored for handoff.
-- Window errors, unhandled rejections, and console errors were recorded through
-  the tested interactions and final reload; recorded error arrays were empty.
+  A real pointer drag reached 55% and changed the rendered material.
+- Settled 0% computed fill: `color(srgb 1 1 1)`, blur 10.5 px, no lens URL.
+  Settled 100% fill: `color(srgb 0 0 0 / 0)`, blur 4.5 px, live lens URL.
+  Card and definition opacity both stayed 1. The shader canvas remained active,
+  with element opacity 0.85 at the clear endpoint.
+- Reading, Color, and Dark buttons changed the actual background. Dark at 100%
+  was captured and visually inspected. Both valid sample searches, invalid
+  search, More/Fewer meanings, close/reopen, and two-stage Escape passed.
+  Search returned focus to its button after a lookup and after Escape.
+- At 390 px, the document width was 390 px. The expanded card was 306 × 421.98
+  CSS px within a 338 × 453.98 stage, with no clipped content or controls.
+  The 1280 px default state also had no horizontal overflow.
+- Per-tab simulation of Reduce Motion and Reduce Transparency forced 0%, disabled
+  the slider, removed the lens and shader canvas, and displayed the preference
+  explanation. Simulation was cleared; system settings were not changed.
+- Window errors, unhandled rejections, and console errors recorded after loading
+  the final build and throughout these interactions were empty. Final script
+  asset: `index-Dqu61md1.js`; final CSS asset: `index-f-dWI4MJ.css`.
+- The finished preview was restored to `refused`, Color background, 68%, closed
+  search/details, at the 1280 × 900 viewport for handoff.
 
 ## Limits and delivery
 
-The full SVG backdrop displacement is Chromium-only in upstream's renderer.
-Safari, Firefox, and macOS WKWebView fall back to the CSS material; a WKWebView
-embedding would not preserve the demonstrated full effect. No Swift source,
-installed native app, certificate, app permissions, or saved app preference was
-changed. Native tests and permission redeployment checks are therefore not
-applicable to this preview-only change.
+Upstream's full SVG backdrop displacement is Chromium-only. Safari, Firefox,
+and macOS WKWebView use the CSS fallback; a WKWebView embedding would not preserve
+this full optical effect. A native renderer or separate Chromium runtime is
+still needed for integration into HuiDict's floating panel.
 
-Pronunciation is wired to browser speech synthesis, but audible output was not
-verified. Physical native selection/image lookup gestures were not part of this
-browser trial. The local server serves the production client build at
-`http://127.0.0.1:4173/`. No external site was published.
+This refinement changes only the browser preview and its evidence/documentation.
+Native signing, installation, permissions, and saved app preferences were not
+changed, so Swift tests and native permission deployment checks do not apply.
+Pronunciation uses browser speech synthesis; audible output was not verified.
+Native selection/image lookup gestures were outside this preview check.
+
+The production client build is served locally at `http://127.0.0.1:4173/`.
+No external site was published.
