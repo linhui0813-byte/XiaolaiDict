@@ -406,6 +406,8 @@ verify_required_files() {
     done
     for file in Contents/Info.plist Contents/Resources/Assets.car \
                 Contents/Resources/MenuBarIcon.svg "Contents/Resources/$NOTICES" \
+                Contents/Resources/LiquefyGlass/surface.html Contents/Resources/LiquefyGlass/manifest.json \
+                Contents/Resources/LiquefyGlass/ThirdPartyNotices.txt \
                 "$XPC_PATH/Contents/Info.plist" \
                 "$MODEL_XPC_PATH/Contents/Info.plist" "$METALLIB_PATH"; do
         [ -s "$bundle/$file" ] || { echo "missing: $bundle/$file"; return 1; }
@@ -765,10 +767,13 @@ assemble() {
     cp "$RESOURCES/DictionaryService-Info.plist" "$xpc/Contents/Info.plist"
     cp "$RESOURCES/ModelService-Info.plist" "$model_xpc/Contents/Info.plist"
     cp "$RESOURCES/MenuBarIcon.svg" "$contents/Resources/MenuBarIcon.svg"
+    python3 Tools/verify-liquefy.py "$RESOURCES/LiquefyGlass" || fail "the offline Liquefy surface is stale"
+    cp -R "$RESOURCES/LiquefyGlass" "$contents/Resources/LiquefyGlass"
     # The licences of what is statically linked into the two services. Generated here rather than
     # tracked, so it cannot drift from `Package.resolved` — which is itself one of the inputs this
     # bundle's digest is taken over, so a dependency changed is a bundle rebuilt.
     Tools/third-party-notices.sh "$contents/Resources/$NOTICES" "$BUILD_ROOT" \
+        "$RESOURCES/LiquefyGlass/ThirdPartyNotices.txt" \
         || fail "the third-party notices could not be gathered"
 
     # The build number is stamped into the copies, not the tracked files: it is a property of the

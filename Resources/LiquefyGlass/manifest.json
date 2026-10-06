@@ -1,0 +1,30 @@
+{
+  "library": "@liquefy-ui/react",
+  "version": "1.0.0",
+  "packages": {
+    "@base-ui/react": "1.8.0",
+    "@base-ui/utils": "0.4.0",
+    "@floating-ui/core": "1.8.0",
+    "@floating-ui/dom": "1.8.0",
+    "@floating-ui/react-dom": "2.1.9",
+    "@floating-ui/utils": "0.2.12",
+    "@liquefy-ui/core": "1.0.0",
+    "@liquefy-ui/react": "1.0.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "scheduler": "0.27.0",
+    "use-sync-external-store": "1.7.0"
+  },
+  "inputs": {
+    "Previews/LiquefyGlass/native/surface.jsx": "e727934125a266756039296ff121ecaae494711ca2feab03e26e759f20e5597f",
+    "Previews/LiquefyGlass/native/surface.css": "276a2f7fcaebe64355a931300f9edf6ec09e8b25483f03c909b7b1d7376cf6a1",
+    "Previews/LiquefyGlass/native/optics.js": "6ade3512cee815c942c0cd8a5586664da7ea5cf1131a4fa7d0d173f0e4f08ac8",
+    "Previews/LiquefyGlass/scripts/build-native.mjs": "b6080d2a6fd2d3f545f8412666077833fcf9d437f0a55a5cc67175add3c83f49",
+    "Previews/LiquefyGlass/package.json": "b3e861caa5e0db7243481b648704096b99230db74dddbcde07093dcf8f5666a9",
+    "Previews/LiquefyGlass/package-lock.json": "46f0399d52502ab32e791859b64e497b69e589f400244ce97702c941a11e9e4a"
+  },
+  "files": {
+    "surface.html": "68fc2bd0eef60e4f65401892162f1c20967d1aac2e090c84590b6834cf869536",
+    "ThirdPartyNotices.txt": "c578fddeb0c470cb257218051e0a39526f430ea9a672cb9325d165df47418adf"
+  }
+}

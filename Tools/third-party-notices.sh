@@ -9,13 +9,17 @@
 # notices behind. A package whose checkout carries no licence file stops the build by name rather
 # than being skipped — a missing notice is exactly the thing that must not pass quietly.
 #
-#   third-party-notices.sh <output-file>
+#   third-party-notices.sh <output-file> [build-root] [native-ui-notices]
 set -euo pipefail
 
 out=${1:-}
 [ -n "$out" ] || { echo "usage: $0 <output-file>" >&2; exit 2; }
 
 build_root=${2:-.build}
+native_notices=${3:-}
+if [ -n "$native_notices" ]; then
+    [ -s "$native_notices" ] || { echo "error: $native_notices is missing or empty" >&2; exit 1; }
+fi
 state=$build_root/workspace-state.json
 [ -f "$state" ] || { echo "error: $state is missing — resolve the packages first" >&2; exit 1; }
 
@@ -81,6 +85,10 @@ HEADER
         done
         printf '\n'
     done <<<"$packages"
+    if [ -n "$native_notices" ]; then
+        printf '\n================================================================================\n'
+        cat "$native_notices"
+    fi
 } > "$work"
 
 mkdir -p "$(dirname "$out")"

@@ -1,4 +1,5 @@
 import SwiftUI
+import ImageIO
 
 struct AppearancePane: View {
     var appearance: Appearance?
@@ -80,9 +81,52 @@ struct AppearancePane: View {
 private struct LookupGlassPreview: View {
     @Environment(\.scale) private var scale
     @Environment(\.colorScheme) private var scheme
+    @State private var cardFrame: CGRect = .zero
+    @State private var previewImage: Data?
 
     var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                readingPage
+                CompactLookupCardView(card: Self.sample, onMore: {})
+                    .frame(width: scale.space.lookupWidth)
+                    .lookupGlassSurface()
+                    .environment(\.liquefyGlassPreviewImage, previewImage)
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("lookup-glass-preview")) } action: {
+                        cardFrame = $0
+                    }
+                    .shadow(color: .black.opacity(Token.Opacity.cardLift),
+                            radius: scale.shadow.panelRadius, y: scale.shadow.panelOffset)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+            .coordinateSpace(name: "lookup-glass-preview")
+            .task(id: SnapshotKey(size: geometry.size, frame: cardFrame, dark: scheme == .dark)) {
+                guard cardFrame.width > 0, cardFrame.height > 0 else { return }
+                let renderer = ImageRenderer(content: readingPage
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .environment(\.scale, scale).environment(\.colorScheme, scheme))
+                renderer.scale = Token.Glass.previewRasterScale
+                let crop = CGRect(x: cardFrame.minX * renderer.scale, y: cardFrame.minY * renderer.scale,
+                                  width: cardFrame.width * renderer.scale, height: cardFrame.height * renderer.scale).integral
+                guard let image = renderer.cgImage?.cropping(to: crop) else { return }
+                let data = NSMutableData()
+                guard let destination = CGImageDestinationCreateWithData(data, "public.png" as CFString, 1, nil) else { return }
+                CGImageDestinationAddImage(destination, image, nil)
+                if CGImageDestinationFinalize(destination) { previewImage = data as Data }
+            }
+        }
+        .frame(height: Token.Glass.previewHeight)
+        .clipShape(RoundedRectangle(cornerRadius: scale.radius.panel, style: .continuous))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Lookup card preview")
+    }
+
+    private struct SnapshotKey: Equatable { let size: CGSize; let frame: CGRect; let dark: Bool }
+
+    private var readingPage: some View {
         ZStack {
+            CardSurface.panel(for: scheme)
             Color.accentColor.opacity(Token.Opacity.badgeWash)
             VStack(alignment: .leading, spacing: scale.space.column) {
                 ForEach(0..<Token.Glass.previewParagraphs, id: \.self) { _ in
@@ -94,18 +138,7 @@ private struct LookupGlassPreview: View {
                 .padding(scale.space.pad)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .background(CardSurface.panel(for: scheme).opacity(Token.Opacity.accentBorder))
-            CompactLookupCardView(card: Self.sample, onMore: {})
-                .frame(width: scale.space.lookupWidth)
-                .lookupGlassSurface()
-                .shadow(color: .black.opacity(Token.Opacity.cardLift),
-                        radius: scale.shadow.panelRadius, y: scale.shadow.panelOffset)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
         }
-        .frame(height: Token.Glass.previewHeight)
-        .clipShape(RoundedRectangle(cornerRadius: scale.radius.panel, style: .continuous))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Lookup card preview")
     }
 
     private static var sample: LookupCard {

@@ -45,6 +45,7 @@ struct XiaolaiDictScene: App {
                 translation: { [delegate] in delegate.models.translationActions },
                 explainer: { [delegate] in delegate.models.explanationActions })
                 .xiaolaiDictAppearance(delegate.appearance)
+                .environment(\.liquefyGlassBackdropFactory, { LiquefyBackdropStream(deliver: $0) })
         }
         // `.plain`, not `.hiddenTitleBar`. A reader pointing at a word asked a question; they did
         // not open a document. Traffic lights and a title bar say "this is yours to manage now",

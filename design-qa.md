@@ -1,117 +1,101 @@
-# Liquefy UI refinement design QA
+# Native Liquefy UI integration QA
 
-final result: passed
+final result: needs review
 
-This result covers the refined browser preview on `feature/liquefy-ui-trial`.
-Native integration remains pending. The result does not claim exact reproduction
-of Apple's Liquid Glass. The [native transparency QA](design-qa-native-transparency.md)
-is historical evidence for the unchanged native app. The original browser trial
-report is retained in commit `8c6c7f6`.
+The native integration is built and installed on `feature/liquefy-ui-trial`.
+The build, signatures, update identity, permission reports, and dictionary
+service checks pass. Live optical and gesture verification remains pending:
+the desktop is locked, both displays are asleep, and ScreenCaptureKit returns
+an empty display list. This report does not claim a completed visual review.
+The prior browser result is retained in [preview QA](design-qa-liquefy-preview.md).
 
-## Findings and fixes
+## Implementation
 
-- **Resolved P1 — transmitted background words competed with definitions.**
-  Frost now ranges from 10.5 to 4.5 px instead of 6.5 to 1.5 px. Background details
-  remain visible but become softer bands. Definitions increase from 15 to 16 px,
-  and the word increases from 27 to 29 px. Foreground opacity remains 1.
-- **Resolved P2 — the blue surface looked flat beside the selected design.**
-  The reading page's white fill increases from 0.5 to 0.84, reducing the blue cast.
-  Surface veil now follows `(1 - transparency / 100) ** 1.45`, giving the middle
-  settings a clearer body. The wider refracting bezel, stronger shader rim,
-  inset reflections, and soft shadow make the boundary more distinct.
-- **Resolved P2 — keyboard focus disappeared when search closed.** Search now
-  returns focus to its button after a lookup or Escape. A second Escape closes
-  the card. Normal speech cancellation no longer displays an error.
-- **Resolved P2 — the reading sentence did not fit every sample word.**
-  `latest` and `appearance` now have their own grammatical reading contexts.
+The native lookup background now embeds the actual `@liquefy-ui/react` 1.0.0
+`LiquidGlass` and `LiquefyProvider`. Its offline adapter imports the actual
+`@liquefy-ui/core` 1.0.0 `createLensMap`. The inspected upstream repository is
+[liquefy-ui/liquefy-ui](https://github.com/liquefy-ui/liquefy-ui), source commit
+`96af8d8f9757420f60c6d085aa0b49bdaa8a0ad6`.
 
-No actionable P0/P1/P2 issue remains in the tested preview states. At maximum
-transparency the reading page remains visible by design; lower values provide
-stronger separation. The existing compact layout remains intact.
+Upstream's SVG displacement in `backdrop-filter` is Chromium-only. The adapter
+samples captured pixels with that same lens map in WebGL 2 inside WKWebView.
+The upstream component still supplies the rim shader, veil, edge, and surface
+reflections. This adapts Liquefy's rendering; it is not Apple's proprietary
+Liquid Glass implementation.
 
-## Source and rendered evidence
+ScreenCaptureKit supplies the rectangle behind the visible card, excluding
+the lookup window itself. Frames remain in memory, refresh at up to six frames
+per second, and never leave the app. The existing silent permission probe gates
+capture; no new consent request is added. The capture session stops when the
+card closes. Native material remains available until a lens and backdrop frame
+are ready. The Appearance preview renders its own sample page into memory and
+uses the same renderer and persisted transparency preference.
 
-- Layout source: [selected Appearance design](docs/liquid-glass-design.png),
-  1487 × 1058 px, `refused`, 55%. The source is a generated design reference;
-  its original display density is unknown.
-- Implementation: [refined browser preview](docs/liquefy-ui-trial-preview.png),
-  1280 × 900 px. CSS viewport 1280 × 900, device scale 1, 1 PNG px per CSS px.
-  Default state: `refused`, Color background, 68%, closed search/details.
-- [Matched before/after](docs/liquefy-ui-refinement-comparison.png),
-  1320 × 506 px, compares the previous and refined implementations at 68%.
-  Both 1280 × 900 browser canvases are scaled proportionally to 640 px wide.
-- [Source and both implementations](docs/liquefy-ui-refinement-source-comparison.png),
-  1680 × 440 px, compares the selected design, previous trial, and refinement at
-  55%. Each canvas is scaled proportionally into a 540 px wide slot.
-- [Focused material comparison](docs/liquefy-ui-refinement-material-comparison.png),
-  1260 × 370 px, contains the same three 55% states at 400 px wide. Crops are
-  source `(677,309)-(1221,689)`, previous `(537,208)-(945,528)`, and refined
-  `(531,205)-(951,532)`. This is an art-direction comparison, not a pixel clone.
-- [Opaque and clear endpoints](docs/liquefy-ui-trial-transparency.png),
-  880 × 383 px, compares 0% and 100% with identical content, Color background,
-  viewport, and `(531,205)-(951,532)` crop. Finite CSS transitions settle before
-  capture; the card remains 400 × 306.34 CSS px at both endpoints.
-- [Compact expanded state](docs/liquefy-ui-refinement-narrow.png), 390 × 844 px,
-  uses `latest`, Reading background, 57%, expanded meanings, open search,
-  and an unknown-word message. The card and controls fit within the stage.
+Native text, pronunciation, Close, Dictionary, More meanings, scrolling, and
+the non-key lookup window remain in SwiftUI. Transparency changes the optical
+background independently of the foreground. Reduce Transparency uses the opaque
+native surface. Reduce Motion suppresses the animated rim. Mostly clear cards
+adapt foreground colors to the captured background's luminance.
 
-The previous implementation captures are retained in the ignored
-`.build/liquefy-qa` directory; refinement captures are in
-`.build/liquefy-refinement`. Combined evidence is committed above. The browser's
-pink translation control visible in some full captures is not preview UI.
+## Verification completed
 
-## Required fidelity surfaces
+- `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer make local` passed
+  all 2,112 Swift tests and 87 tool/reference tests. The test-defaults cleanup
+  completed with no abandoned preferences returning.
+- The new region tests cover top-left capture coordinates on a second display
+  with negative vertical origin and reject invalid/off-screen geometry.
+- The asset tests reject modified payloads, changed source without regeneration,
+  and missing copyright notices. The native build verifies the source/payload
+  manifest before signing and includes licenses for every rendered package.
+- Strict signatures, component host hashes, and compatibility with the installed
+  certificate-based signing requirement passed before and after installation.
+- Native diagnostic runtime reported actual library version `1.0.0`, lens map
+  present, rim shader present, and the saved transparency preference delivered
+  to JavaScript. No backdrop frames arrived while the desktop was locked.
+- Both direct and LaunchServices native diagnostic launches encountered the
+  same missing capture display. A separate silent AppKit/ScreenCaptureKit probe
+  reported `CGSSessionScreenIsLocked = 1`, display asleep, and zero shareable
+  displays. This distinguishes the current environmental block from a claim
+  that the card's optical rendering was visually verified.
+- Three fresh installed `--permission-report` processes returned exit zero,
+  `bundle = com.linhui.huidict`, and both grants present, including three new
+  processes after restarting the normal app. Normal app TCC decisions
+  independently allowed Accessibility and Screen Recording for HuiDict itself;
+  terminal-launched reports alone are not the evidence for the app's own grants.
+- Three installed dictionary lookups of `set` returned `entries`.
 
-| Surface | Result |
-| --- | --- |
-| Fonts and typography | macOS system UI font; 29 px bold word, 16 px definitions, 15 px pronunciation, 14 px More meanings. The selected header/body/action hierarchy and Chinese definitions are preserved. Compact mode uses 25 px word and 14 px definitions. Reader text deliberately uses Georgia. |
-| Spacing and layout | Default card is 400 × 306.34 CSS px with 24 px padding and 30 px corners. Divider, pronunciation gap, three meaning rows, and trailing action preserve the source anatomy. Circular header controls are 30 px. The browser Appearance panel is wider than the source/native Settings panel. |
-| Colors and material | Default 68% settles to white surface alpha 0.191632 and 6.42 px blur. The actual Liquefy lens refracts live content with a 30 px bezel, curve 2.4, refraction 0.92. At 0% the fill is opaque white; at 100% it is transparent with 4.5 px blur and a persistent illuminated rim. Dark background uses light text and a navy opaque endpoint. |
-| Image quality and assets | Actual published Liquefy UI 1.0.0 supplies the optical rendering. Its shader canvas is 398 × 304 internal px on the default card. Background paragraphs are live DOM text. Liquefy search/close icons and the Lucide speaker remain vector assets. No screenshot is embedded behind the card. |
-| Copy and content | Appearance, material description, transparency value, endpoint captions, and helper text preserve the selected copy. Search accepts the three documented preview words, and unknown words receive a clear scope explanation. More/Fewer meanings work. Sample reading sentences now follow the selected word. |
+## Installation
 
-The generated wallpaper is represented by controllable Reading, Color, and Dark
-backgrounds. This is deliberate test content. The website documentation's layout
-is not being cloned; its package supplies rendering for HuiDict's selected card.
+Installed build: `2026.1006.21702` at `~/Applications/HuiDict.app`.
+The update used the original persistent certificate and bundle identifier
+`com.linhui.huidict`. The bundle was installed with an atomic exchange; the old
+build is retained as
+`~/Applications/HuiDict.rollback-2026.1005.155745-liquefy-20261006T022328Z.app`.
+The normal installed app is left running. No permissions were reset.
 
-## Browser validation
+Local evidence is retained in `.build/liquefy-native-build.log`,
+`.build/liquefy-native-qa-report.json`, `.build/liquefy-native-ls-report.json`,
+`.build/liquefy-native-install.json`, `.build/liquefy-native-permission-reports.json`,
+`.build/liquefy-native-own-tcc.log`, and
+`.build/liquefy-native-installed-lookups.jsonl`.
 
-- `npm run build` passed after the final source change, with packages pinned by
-  `package-lock.json`. The running local server serves `dist/client`.
-- Keyboard Home/End reached 0%/100%; ArrowRight incremented 0% to 1%.
-  A real pointer drag reached 55% and changed the rendered material.
-- Settled 0% computed fill: `color(srgb 1 1 1)`, blur 10.5 px, no lens URL.
-  Settled 100% fill: `color(srgb 0 0 0 / 0)`, blur 4.5 px, live lens URL.
-  Card and definition opacity both stayed 1. The shader canvas remained active,
-  with element opacity 0.85 at the clear endpoint.
-- Reading, Color, and Dark buttons changed the actual background. Dark at 100%
-  was captured and visually inspected. Both valid sample searches, invalid
-  search, More/Fewer meanings, close/reopen, and two-stage Escape passed.
-  Search returned focus to its button after a lookup and after Escape.
-- At 390 px, the document width was 390 px. The expanded card was 306 × 421.98
-  CSS px within a 338 × 453.98 stage, with no clipped content or controls.
-  The 1280 px default state also had no horizontal overflow.
-- Per-tab simulation of Reduce Motion and Reduce Transparency forced 0%, disabled
-  the slider, removed the lens and shader canvas, and displayed the preference
-  explanation. Simulation was cleared; system settings were not changed.
-- Window errors, unhandled rejections, and console errors recorded after loading
-  the final build and throughout these interactions were empty. Final script
-  asset: `index-Dqu61md1.js`; final CSS asset: `index-f-dWI4MJ.css`.
-- The finished preview was restored to `refused`, Color background, 68%, closed
-  search/details, at the 1280 × 900 viewport for handoff.
+## Review still required
 
-## Limits and delivery
+An unlocked desktop is required to verify live frame delivery, the actual 0%
+and 100% floating-card transmission over light/colored/dark reading pages, the
+Appearance slider and sample renderer, detailed-card resizing, and repeated
+selection/image lookup gestures. No native screenshot from this integration
+is presented as accepted design evidence yet. The prior browser captures apply
+only to the browser preview. Audio output and sustained CPU/GPU usage have not
+been measured for this native integration.
 
-Upstream's full SVG backdrop displacement is Chromium-only. Safari, Firefox,
-and macOS WKWebView use the CSS fallback; a WKWebView embedding would not preserve
-this full optical effect. A native renderer or separate Chromium runtime is
-still needed for integration into HuiDict's floating panel.
+To collect the native card evidence after unlocking:
 
-This refinement changes only the browser preview and its evidence/documentation.
-Native signing, installation, permissions, and saved app preferences were not
-changed, so Swift tests and native permission deployment checks do not apply.
-Pronunciation uses browser speech synthesis; audible output was not verified.
-Native selection/image lookup gestures were outside this preview check.
+```sh
+HUIDICT_LOOKUP_GLASS_EVIDENCE_DIRECTORY="$PWD/.build/liquefy-native-qa" \
+  ~/Applications/HuiDict.app/Contents/MacOS/HuiDict --panel-report
+```
 
-The production client build is served locally at `http://127.0.0.1:4173/`.
-No external site was published.
+The report requires the real renderer to receive a backdrop before measuring
+transmission. It changes the same persisted preference as the slider, restores
+its original value afterward, and captures only the app's own card and test page.

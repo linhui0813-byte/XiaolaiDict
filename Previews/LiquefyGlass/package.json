@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/prepare-sites-build.mjs",
+    "build:native": "node scripts/build-native.mjs",
     "preview": "vite preview",
     "test:sites": "node --test tests/sites-worker.test.mjs"
   },
   "dependencies": {
+    "@liquefy-ui/core": "1.0.0",
     "@liquefy-ui/react": "1.0.0",
     "@liquefy-ui/icons": "1.0.0",
     "lucide-react": "1.52.0",

@@ -35,6 +35,12 @@ enum LookupGlassReport {
                 Instrument.isOnScreen(controller.window) && controller.lastFit != nil
             }), let window = controller.window else { throw Failure.windowMissing("settling its layout") }
             try await Task.sleep(for: .milliseconds(1200))
+            var renderer = await LiquefyGlassStatus.report(in: window)
+            for _ in 0..<40 where renderer["ready"] as? Bool != true {
+                try await Task.sleep(for: .milliseconds(150))
+                renderer = await LiquefyGlassStatus.report(in: window)
+            }
+            guard renderer["ready"] as? Bool == true else { throw Failure.rendererUnavailable(String(describing: renderer)) }
             window.setFrameOrigin(NSPoint(x: screen.visibleFrame.midX - window.frame.width / 2,
                                           y: screen.visibleFrame.midY - window.frame.height / 2))
             let backdrop = NSWindow(contentRect: window.frame.insetBy(dx: -40, dy: -40),
@@ -74,7 +80,8 @@ enum LookupGlassReport {
                     readings[percentage] = try interior(image, scale: screen.backingScaleFactor)
                     states.append(["backdrop": page.rawValue, "transparency": value,
                                    "windowNumber": window.windowNumber, "isKey": window.isKeyWindow,
-                                   "appIsActive": NSApp.isActive])
+                                   "appIsActive": NSApp.isActive,
+                                   "renderer": await LiquefyGlassStatus.report(in: window)])
                 }
                 guard let opaque = readings[0], let clear = readings[100] else { throw Failure.imageMissing }
                 let opaqueCorrelation = try correlation(opaque, reference)
@@ -92,6 +99,7 @@ enum LookupGlassReport {
                 "appWasActive": activeBefore, "frontmostBefore": frontBefore,
                 "frontmostAfter": NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "none",
                 "restoredTransparency": original.transparency,
+                "renderer": renderer,
             ]
             guard Instrument.write(report) else { return .failure }
             return responds ? .success : .failure
@@ -163,7 +171,7 @@ enum LookupGlassReport {
     }
 
     private enum Failure: Error {
-        case permissionMissing, dictionaryUnavailable, windowMissing(String), displayMissing, imageMissing
+        case permissionMissing, dictionaryUnavailable, windowMissing(String), displayMissing, imageMissing, rendererUnavailable(String)
     }
 }
 

@@ -131,6 +131,9 @@ class BundleResourceVerificationTests(unittest.TestCase):
                 file.chmod(0o755)
             for relative in ["Contents/Info.plist", "Contents/Resources/Assets.car",
                              "Contents/Resources/MenuBarIcon.svg", "Contents/Resources/Notices.txt",
+                             "Contents/Resources/LiquefyGlass/surface.html",
+                             "Contents/Resources/LiquefyGlass/manifest.json",
+                             "Contents/Resources/LiquefyGlass/ThirdPartyNotices.txt",
                              f"{xpc}/Contents/Info.plist", f"{model}/Contents/Info.plist",
                              f"{model}/Contents/Resources/Unexpected.bundle/default.metallib"]:
                 file = bundle / relative

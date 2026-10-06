@@ -31,6 +31,15 @@ private struct LookupGlassSurface: ViewModifier {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var contrast
+    @State private var liquefyReady = false
+    @State private var darkBackdrop: Bool?
+
+    private var foregroundScheme: ColorScheme {
+        if liquefyReady, glass.transparency > Token.Glass.foregroundAdaptationThreshold, let darkBackdrop {
+            return darkBackdrop ? .dark : .light
+        }
+        return scheme
+    }
 
     private var shape: RoundedRectangle {
         RoundedRectangle(cornerRadius: scale.radius.lookup, style: .continuous)
@@ -39,6 +48,7 @@ private struct LookupGlassSurface: ViewModifier {
     func body(content: Content) -> some View {
         if reduceTransparency {
             content.clipShape(shape)
+                .environment(\.colorScheme, scheme)
                 .background(shape.fill(CardSurface.panel(for: scheme)))
                 .overlay(shape.strokeBorder(
                     Color.primary.opacity(contrast == .increased
@@ -46,33 +56,43 @@ private struct LookupGlassSurface: ViewModifier {
                     lineWidth: Token.Stroke.hairline))
         } else {
             content.clipShape(shape)
+                .environment(\.colorScheme, foregroundScheme)
                 // Local separation around glyphs helps at the clear end without fogging the plate.
-                .shadow(color: CardSurface.panel(for: scheme).opacity(glass.transparency),
+                .shadow(color: CardSurface.panel(for: foregroundScheme).opacity(glass.transparency),
                         radius: Token.Glass.foregroundGlowRadius)
-                .shadow(color: CardSurface.panel(for: scheme).opacity(glass.transparency),
+                .shadow(color: CardSurface.panel(for: foregroundScheme).opacity(glass.transparency),
                         radius: Token.Glass.foregroundEdgeRadius)
                 .background {
                     ZStack {
-                        shape.fill(.clear)
-                            .glassEffect(.clear, in: shape)
-                            .opacity(glass.materialOpacity(reduceTransparency: false))
-                        shape.fill(CardSurface.panel(for: scheme).opacity(
-                            glass.surfaceOpacity(reduceTransparency: false)))
+                        ZStack {
+                            shape.fill(.clear)
+                                .glassEffect(.clear, in: shape)
+                                .opacity(glass.materialOpacity(reduceTransparency: false))
+                            shape.fill(CardSurface.panel(for: scheme).opacity(
+                                glass.surfaceOpacity(reduceTransparency: false)))
+                        }
+                        .opacity(liquefyReady ? 0 : 1)
+                        LiquefyGlassSurface(onReady: { liquefyReady = $0 }, onBackdropDark: { darkBackdrop = $0 })
+                            .environment(\.colorScheme, foregroundScheme)
+                            .opacity(liquefyReady ? 1 : 0)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
                     }
                 }
                 // This window must stay non-key. The environment changes visual activity only.
                 .environment(\.appearsActive, true)
                 .overlay {
-                    LookupGlassRim(shape: shape, increasedContrast: contrast == .increased)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
+                    if !liquefyReady || contrast == .increased {
+                        LookupGlassRim(shape: shape, increasedContrast: contrast == .increased)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
                 }
         }
     }
 }
 
-/// An illuminated edge gives a large glass sheet visible thickness even over a uniform page.
-/// The backdrop blur and refraction remain native; no background is captured or drawn here.
+/// Native fallback edge and the optional high-contrast outline over the Liquefy surface.
 private struct LookupGlassRim: View {
     let shape: RoundedRectangle
     let increasedContrast: Bool

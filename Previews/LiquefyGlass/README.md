@@ -1,9 +1,10 @@
 # HuiDict Liquefy UI trial
 
-A browser preview of HuiDict's dictionary card using the actual published
+A browser preview and native HuiDict integration using the actual published
 [`@liquefy-ui/react`](https://github.com/liquefy-ui/liquefy-ui) 1.0.0 package,
 its `LiquidGlass` surface, and `LiquidSlider`. The local preview is served from
-the built client files. It does not replace HuiDict's installed native pop-up.
+the built client files. The native app embeds a separate offline background
+surface under its existing SwiftUI lookup content.
 
 The card preserves the selected design's word header, pronunciation, Chinese
 meaning rows, close/search actions, and More meanings link. Search accepts three
@@ -48,21 +49,50 @@ Open the local URL printed by the server in Chrome or another Chromium browser.
 - Search returns keyboard focus to its button after a lookup or Escape. A second
   Escape closes the card. Sample reading sentences follow the selected word.
 
-## Native compatibility
+## Native integration
 
 Liquefy UI is a React/web renderer, not a SwiftUI package. Its real backdrop
 refraction uses an SVG displacement filter in `backdrop-filter`, which the
 [upstream source](https://github.com/liquefy-ui/liquefy-ui/blob/96af8d8f9757420f60c6d085aa0b49bdaa8a0ad6/packages/core/src/lens-filter.ts)
-limits to Chromium. Safari, Firefox, and macOS `WKWebView` use the CSS material
-fallback. A native renderer or a separate Chromium runtime would be needed to
-carry the full optical effect into HuiDict's floating panel; embedding this
-preview in `WKWebView` would not preserve the effect demonstrated here.
+limits to Chromium. Simply embedding the browser preview in `WKWebView` would
+lose that displacement. The native adapter instead imports the upstream core's
+`createLensMap` and samples the backdrop with that map in WebGL 2. The real
+`LiquidGlass` component supplies the rim shader, edge, veil, and reflections.
+This is an adaptation of Liquefy's optics, not Apple's proprietary renderer.
 
-This branch therefore makes the chosen library concrete and reviewable before
-changing the app's window/rendering architecture. Existing native Swift sources,
-installed signing identity, permissions, and saved transparency preference are
-untouched by this trial. The previous native transparency implementation remains
-in the parent commit `73051f7`.
+`LiquefyGlassSurface.swift` hosts the offline renderer as a background-only view.
+Text, pronunciation, Close, Dictionary, More meanings, and the non-key lookup
+window remain native. `LiquefyBackdropStream.swift` supplies the rectangle behind
+the visible card through ScreenCaptureKit, excluding the lookup window itself.
+Frames remain in memory, are sampled at up to six frames per second, and never
+leave the app. Capture stops when the card closes. The existing silent permission
+probe gates capture; this integration does not request additional permission.
+The native material remains available when capture or WebGL is unavailable.
+
+The Appearance pane renders its own sample page into memory and uses the same
+renderer and persisted transparency preference. It does not capture the desktop.
+Reduce Transparency uses the opaque native surface; Reduce Motion disables the
+animated rim. Foreground colors adapt to dark and light captured backgrounds once
+the surface is mostly clear.
+
+Rebuild the embedded surface after changing `native/`, its build script, or the
+package lock:
+
+```sh
+cd Previews/LiquefyGlass
+npm run build:native
+cd ../..
+python3 Tools/verify-liquefy.py Resources/LiquefyGlass
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer make local
+```
+
+The generated HTML includes its CSS and JavaScript. It needs no development
+server or network connection. Its content policy forbids network access, and
+the host permits only its local surface file to load. The generated manifest
+records source and payload hashes plus exact bundled package versions. The
+native build rejects stale assets and includes every rendered package's license.
+Local updates retain HuiDict's existing certificate, bundle identifier, and
+installed path.
 
 ## References and validation
 
@@ -71,7 +101,8 @@ in the parent commit `73051f7`.
   `package.json` and resolved in `package-lock.json`.
 - [Live glass documentation](https://liquefy-ui.com/#/components/glass).
 - Liquefy UI and its icons: MIT. Speaker icon: Lucide (ISC).
-- [Design QA and browser validation](../../design-qa.md).
+- [Native design QA](../../design-qa.md).
+- [Browser preview validation](../../design-qa-liquefy-preview.md).
 
 The bundled static worker scaffold is retained for optional future hosting. No
 external hosting service is configured or deployed by this trial.

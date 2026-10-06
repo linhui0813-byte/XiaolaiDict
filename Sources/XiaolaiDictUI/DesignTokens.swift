@@ -80,6 +80,14 @@ public enum Token {
         static let settingsLabelWidth: CGFloat = 112
         static let previewHeight: CGFloat = 300
         static let previewParagraphs = 3
+        /// Rasterise the Settings sample at Retina density, independent of the font scale.
+        static let previewRasterScale: CGFloat = 2
+        /// Ignore incomplete layout rectangles before asking the app for a backdrop.
+        static let minimumCaptureSize: CGFloat = 4
+        /// Track panel placement four times a second without continuously querying window geometry.
+        static let regionRefreshInterval = Duration.milliseconds(250)
+        /// Background luminance controls the foreground once the veil is more clear than opaque.
+        static let foregroundAdaptationThreshold = 0.5
         /// Maximum transmission retains some native refraction while letting reading detail through.
         static let clearTransmission = 0.45
         /// The clearest setting still has a light contrast veil for dictionary text over dark pages.
