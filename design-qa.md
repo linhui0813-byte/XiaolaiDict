@@ -2,12 +2,13 @@
 
 final result: pass
 
-The native integration is built and installed on `feature/liquefy-ui-trial`.
+The native integration is built, installed, and merged into `main`.
 The build, signatures, update identity, permission reports, live backdrop,
 transparency endpoints, dark-page contrast, and Appearance preview checks pass.
 This verdict covers native rendering and the shared preference. Pointer dragging
 of the slider, detailed-card controls, and physical shortcut/image-hover gestures
-remain unverified. Hui's visual acceptance is separate from these checks.
+remain unverified. Hui accepted the visual result and requested the merge on
+2026-10-06; that acceptance does not substitute for the remaining gesture checks.
 The prior browser result is retained in [preview QA](design-qa-liquefy-preview.md).
 
 [Native transparency comparison](docs/liquefy-native-transparency.png),

@@ -1,4 +1,4 @@
-# HuiDict Liquefy UI trial
+# HuiDict Liquefy glass
 
 A browser preview and native HuiDict integration using the actual published
 [`@liquefy-ui/react`](https://github.com/liquefy-ui/liquefy-ui) 1.0.0 package,
@@ -112,4 +112,4 @@ installed path.
 - [Browser preview validation](../../design-qa-liquefy-preview.md).
 
 The bundled static worker scaffold is retained for optional future hosting. No
-external hosting service is configured or deployed by this trial.
+external hosting service is configured or deployed by this preview.

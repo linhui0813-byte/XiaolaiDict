@@ -30,6 +30,10 @@ translations, and usage explanations. The local Qwen runtime is permanently disa
 The key is read from a private runtime environment file, never bundled or committed. See
 [DeepSeek setup and verification](docs/deepseek.md).
 
+Lookup cards use an offline Liquefy glass renderer. **Settings → Appearance → Transparency**
+adjusts both the preview and live cards. See [glass controls and verification](docs/liquid-glass.md)
+and the [native comparison](docs/liquefy-native-transparency.png).
+
 The card automatically shows a short Chinese translation of
 the selected word, using its surrounding sentence when available. A word-form note explains
 forms such as **refused** (past tense / past participle of **refuse**). DeepSeek's generated gloss is
