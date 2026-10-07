@@ -442,6 +442,7 @@ public struct LookupPanelContent: View {
     @State private var explaining: Task<Void, Never>?
     @State private var translation: TranslationPane?
     @State private var wordTranslation: WordLookupTranslation?
+    @State private var onlineWordLookup = OnlineWordLookup()
     /// The one translation in flight. Replacing it cancels the one before, so two clicks cannot
     /// finish out of order, and it is cancelled when the card goes away. **Cancelling stops this
     /// side waiting** — a generation already running inside the model service is not something a
@@ -564,7 +565,10 @@ public struct LookupPanelContent: View {
         .padding(.trailing, scale.shadow.glowAfter)
         // The panel has gone: nothing is waiting for this answer, and a generation running for a
         // closed panel is one the reader is paying for twice.
-        .onDisappear { translating?.cancel(); explaining?.cancel() }
+        .onDisappear { translating?.cancel(); explaining?.cancel(); onlineWordLookup.cancel() }
+        .onChange(of: onlineWordTranslationQuestion, initial: true) {
+            onlineWordLookup.reset(for: onlineWordTranslationQuestion)
+        }
         // Observe the displayed entry: nil and an explicit opening index show the same card,
         // while a late primary can change that card without changing the reader's selection.
         .onChange(of: entry.map { PanelSelection.identity(of: $0) }) { clearPanes() }
@@ -588,6 +592,16 @@ public struct LookupPanelContent: View {
     private var wordTranslationQuestion: TranslationQuestion? {
         guard translator.canTranslateWords, let entry else { return nil }
         return TranslationQuestion.word(card(for: entry), target: translator.target)
+    }
+
+    /// No dictionary entry is needed for the explicit DeepSeek fallback.
+    var onlineWordTranslationQuestion: TranslationQuestion? {
+        #if HUIDICT_LOCAL_BUILD
+        guard case .notFound = presentation.outcome else { return nil }
+        return TranslationQuestion.word(cardWithoutAnEntry(.absent), target: translator.target)
+        #else
+        return nil
+        #endif
     }
 
     /// Whether the sentence is already in the reader's own language — compared **now**, against a
@@ -637,7 +651,9 @@ public struct LookupPanelContent: View {
         CompactLookupCardView(
             card: card, incomplete: compactIsIncomplete,
             wordTranslation: wordTranslation?.gloss(for: wordTranslationQuestion),
-            hasWordContext: card.sentence?.isEmpty == false) {
+            hasWordContext: card.sentence?.isEmpty == false,
+            onlineLookup: onlineWordTranslationQuestion == nil ? nil : onlineWordLookup,
+            onlineQuestion: onlineWordTranslationQuestion) {
             showingDetails = true
         }
     }
@@ -662,6 +678,10 @@ public struct LookupPanelContent: View {
             VStack(alignment: .leading, spacing: scale.space.stack) {
                 captureCaveat
                 LookupCardView(card: cardWithoutAnEntry(.absent))
+                if let question = onlineWordTranslationQuestion {
+                    OnlineWordLookupView(lookup: onlineWordLookup, question: question)
+                        .padding(.horizontal, scale.space.padAcross)
+                }
                 // **A miss and an unanswered question are not the same result.** Both drew "No
                 // entry … in your dictionaries", which is a confirmed absence — so a crashed or
                 // unreachable XPC service, with the public fallback also finding nothing, told the

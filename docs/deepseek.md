@@ -5,6 +5,16 @@ tasks previously handled by Qwen: selecting a contextual dictionary meaning, gen
 translations with grammar labels, translating sentences, and explaining usage in Simplified Chinese.
 Thinking is explicitly disabled. The upstream XiaolaiDict build retains its local-model workflow.
 
+When the dictionaries have no entry, the compact and expanded cards offer **Look up online**.
+Only clicking that button requests a DeepSeek word translation, using the selected spelling and
+the captured sentence when available. Showing or expanding a missing-entry card makes no translation
+request. Duplicate clicks share the pending request; closing the card or changing its word, context,
+or target language cancels it. A failed answer offers a manual retry, with no automatic retry.
+The result is labelled **Online translation · DeepSeek** and carries an AI-suggestion caveat for
+names and coined words. It is an API-generated translation, not a live web search or a dictionary
+definition, and never creates publisher senses or confirmed study items. Existing translations for
+words with dictionary entries retain their current behavior.
+
 HuiDict never opens a model-service connection, prewarms Qwen, downloads weights, or offers a local
 model download. Its legacy model-service executable exits immediately if invoked. API errors do not
 enable Qwen. Dictionary lookup remains local; the existing Apple and embedding fallbacks remain.

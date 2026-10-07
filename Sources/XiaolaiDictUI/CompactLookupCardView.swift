@@ -64,6 +64,8 @@ struct CompactLookupCardView: View {
     var incomplete = false
     var wordTranslation: WordTranslationGloss? = nil
     var hasWordContext = false
+    var onlineLookup: OnlineWordLookup? = nil
+    var onlineQuestion: TranslationQuestion? = nil
     let onMore: () -> Void
 
     private var summary: CompactLookupSummary { CompactLookupSummary(card: card) }
@@ -135,6 +137,10 @@ struct CompactLookupCardView: View {
             }
 
             meanings
+
+            if let onlineLookup, let onlineQuestion {
+                OnlineWordLookupView(lookup: onlineLookup, question: onlineQuestion)
+            }
 
             HStack(alignment: .firstTextBaseline, spacing: scale.space.inline) {
                 if incomplete {

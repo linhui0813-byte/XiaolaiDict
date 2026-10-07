@@ -1,36 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Appearance" : {
-
-    },
-    "Liquid Glass" : {
-
-    },
-    "Choose how much of the background shows through." : {
-
-    },
-    "Transparency" : {
-
-    },
-    "More opaque" : {
-
-    },
-    "Clearer" : {
-
-    },
-    "Text and icons stay crisp." : {
-
-    },
-    "Reduce Transparency is enabled in System Settings. The card uses an opaque background." : {
-
-    },
-    "The proposal was refused. We continued reading, looking for a clearer explanation. Each word opened another way to understand the story." : {
-
-    },
-    "Lookup card preview" : {
-
-    },
     " (a guess — not confirmed)" : {
       "comment" : "Appended to copied text where the sense was not confirmed"
     },
@@ -228,6 +198,9 @@
     "A word you look up on more than one day appears here." : {
 
     },
+    "AI suggestion. Names and coined words may need more context." : {
+
+    },
     "API key needed" : {
 
     },
@@ -268,6 +241,9 @@
 
     },
     "Any tag" : {
+
+    },
+    "Appearance" : {
 
     },
     "Archive %lld" : {
@@ -321,6 +297,9 @@
     "Choose a dictionary that marks senses…" : {
 
     },
+    "Choose how much of the background shows through." : {
+
+    },
     "Choose this meaning" : {
 
     },
@@ -331,6 +310,9 @@
 
     },
     "Clear the search" : {
+
+    },
+    "Clearer" : {
 
     },
     "Close lookup" : {
@@ -586,6 +568,9 @@
     "Licences" : {
 
     },
+    "Liquid Glass" : {
+
+    },
     "Local model" : {
 
     },
@@ -593,6 +578,9 @@
 
     },
     "Look Up Selection    %@" : {
+
+    },
+    "Look up online" : {
 
     },
     "Look up the selection" : {
@@ -608,6 +596,9 @@
         }
       }
     },
+    "Looking up online…" : {
+
+    },
     "Looking up “%@” in your dictionaries…" : {
       "comment" : "Shown while the dictionaries are being asked; the placeholder is the word"
     },
@@ -615,6 +606,9 @@
       "comment" : "Shown while a lookup is still being made"
     },
     "Lookup" : {
+
+    },
+    "Lookup card preview" : {
 
     },
     "Lookup shortcut" : {
@@ -654,6 +648,9 @@
           }
         }
       }
+    },
+    "More opaque" : {
+
     },
     "Name the app a word was read in" : {
 
@@ -758,6 +755,12 @@
 
     },
     "One thing is still needed." : {
+
+    },
+    "Online lookup could not return a translation. Check your connection and DeepSeek setup." : {
+
+    },
+    "Online translation · DeepSeek" : {
 
     },
     "Only a compact voice is available for this language. macOS offers nothing better for it." : {
@@ -896,6 +899,9 @@
     "Record this as the sense you met" : {
 
     },
+    "Reduce Transparency is enabled in System Settings. The card uses an opaque background." : {
+
+    },
     "Remembered" : {
 
     },
@@ -963,6 +969,9 @@
 
     },
     "Select a word anywhere and press %@." : {
+
+    },
+    "Send this word and any captured sentence to DeepSeek for a suggested translation." : {
 
     },
     "Set Up XiaolaiDict" : {
@@ -1096,6 +1105,9 @@
     "Text" : {
 
     },
+    "Text and icons stay crisp." : {
+
+    },
     "That answer was not saved: %@" : {
       "comment" : "Shown on a review card when the grade could not be written"
     },
@@ -1171,6 +1183,9 @@
 
     },
     "The only sense in this entry" : {
+
+    },
+    "The proposal was refused. We continued reading, looking for a clearer explanation. Each word opened another way to understand the story." : {
 
     },
     "The quick brown fox jumps over the lazy dog." : {
@@ -1258,7 +1273,13 @@
     "Translation and sense picking" : {
 
     },
+    "Transparency" : {
+
+    },
     "Try again" : {
+
+    },
+    "Try online lookup again" : {
 
     },
     "Unarchive %lld" : {
@@ -1292,6 +1313,9 @@
 
     },
     "Use the larger model (%@)" : {
+
+    },
+    "Uses the captured sentence" : {
 
     },
     "Version %@ (%@)" : {
